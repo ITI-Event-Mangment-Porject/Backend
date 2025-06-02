@@ -15,6 +15,8 @@ use App\Http\Controllers\API\AuthController;
 | be assigned to the "api" middleware group. 
 |
 */
+
+// This route is for testing the API connection
 Route::get('/test-connection', function () {
     return response()->json(['status' => 'working']);
 });
@@ -51,10 +53,10 @@ Route::group([], function () {
 });
 
 // Protected routes (requires authentication)
-Route::group(['middleware' => ['auth:sanctum']], function () {
-    // User profile routes
+Route::group(['middleware' => ['auth:api']], function () {    // User profile routes
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
 
     /*
     |--------------------------------------------------------------------------

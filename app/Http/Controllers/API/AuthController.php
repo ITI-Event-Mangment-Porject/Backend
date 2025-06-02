@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends BaseApiController
 {
@@ -28,14 +29,15 @@ class AuthController extends BaseApiController
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-        $token = $user->createToken('auth_token')->plainTextToken;
+            'password' => Hash::make($request->password)]);
+
+        $token = JWTAuth::fromUser($user);
 
         return $this->sendResponse([
             'user' => $user->only(['id', 'name', 'email']),
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'expires_in' => JWTAuth::factory()->getTTL() * 60
         ], 'User registered successfully.');
     }
 
@@ -51,19 +53,17 @@ class AuthController extends BaseApiController
 
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors()->toArray(), 422);
-        }
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        }        $credentials = $request->only('email', 'password');
+        
+        if (!$token = JWTAuth::attempt($credentials)) {
             return $this->sendError('Unauthorized.', ['error' => 'Invalid credentials'], 401);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
-        $token = $user->createToken('auth_token')->plainTextToken;
-
         return $this->sendResponse([
-            'user' => $user->only(['id', 'name', 'email']),
+            'user' => JWTAuth::user()->only(['id', 'name', 'email']),
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'expires_in' => JWTAuth::factory()->getTTL() * 60
         ], 'User logged in successfully.');
     }
 
@@ -71,20 +71,41 @@ class AuthController extends BaseApiController
      * Get authenticated user's profile
      */    public function profile(Request $request)
     {
-        return $this->sendResponse([
-            'user' => $request->user()->only(['id', 'name', 'email'])
-        ], 'Profile retrieved successfully.');
+        try {
+            $user = JWTAuth::parseToken()->authenticate();
+            return $this->sendResponse([
+                'user' => $user->only(['id', 'name', 'email'])
+            ], 'Profile retrieved successfully.');
+        } catch (\Exception $e) {
+            return $this->sendError('Token Error.', ['error' => 'Invalid token'], 401);
+        }
     }
 
     /**
      * Logout user
-     */
-    public function logout(Request $request)
+     */    public function logout()
     {
-        $token = $request->user()->currentAccessToken();
-        if ($token) {
-            $token->delete();
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+            return $this->sendResponse([], 'User logged out successfully.');
+        } catch (\Exception $e) {
+            return $this->sendError('Logout Error.', ['error' => 'Failed to logout'], 500);
         }
-        return $this->sendResponse([], 'User logged out successfully.');
+    }
+
+    /**
+     * Refresh token
+     */    public function refresh()
+    {
+        try {
+            $token = JWTAuth::parseToken()->refresh();
+            return $this->sendResponse([
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60
+            ], 'Token refreshed successfully.');
+        } catch (\Exception $e) {
+            return $this->sendError('Refresh Error.', ['error' => 'Failed to refresh token'], 401);
+        }
     }
 }

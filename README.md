@@ -41,7 +41,7 @@ php artisan key:generate
 
 ### Key Features
 
-- **Authentication**: Uses Laravel's built-in authentication system
+- **Authentication**: JWT (JSON Web Token) authentication using tymon/jwt-auth
 - **Database**: MySQL configured by default
 - **Caching**: Database-based caching enabled
 - **Session**: Database-based session handling
@@ -58,6 +58,9 @@ Important environment variables to configure:
 - `APP_ENV`: Application environment (local/production)
 - `APP_DEBUG`: Debug mode (true/false)
 - `APP_URL`: Your application URL
+- `JWT_SECRET`: Secret key for JWT token encryption (Generate using `php artisan jwt:secret`)
+- `JWT_TTL`: JWT token time-to-live in minutes (default: 60 minutes)
+- `JWT_REFRESH_TTL`: JWT refresh token time-to-live in minutes (default: 20160)
 - `DB_*`: Database configuration
 - `MAIL_*`: Mail configuration
 - `QUEUE_CONNECTION`: Queue driver settings
@@ -149,6 +152,56 @@ All API responses follow a standardized format using `BaseApiController`:
 #### Public Routes
 - `POST /api/register` - Register new user
 - `POST /api/login` - User login
+  ```json
+  // Request
+  {
+    "email": "user@example.com",
+    "password": "password123"
+  }
+  // Response
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": 1,
+        "name": "User Name",
+        "email": "user@example.com"
+      },
+      "access_token": "jwt_token_here",
+      "token_type": "Bearer",
+      "expires_in": 3600
+    },
+    "message": "User logged in successfully."
+  }
+  ```
+
+#### Protected Routes (Requires JWT Token)
+- `GET /api/profile` - Get authenticated user's profile
+- `POST /api/logout` - Logout user (invalidates token)
+- `POST /api/refresh` - Refresh JWT token
+
+For protected routes, include the JWT token in the Authorization header:
+```http
+Authorization: Bearer your_jwt_token_here
+```
+
+### JWT Authentication
+
+This project uses JWT (JSON Web Token) for authentication. Key points:
+- Tokens are valid for 60 minutes by default
+- Use the refresh token endpoint to get a new token before expiration
+- No database queries needed for token verification
+- Stateless authentication perfect for APIs
+- Configure JWT settings in `.env`:
+  ```
+  JWT_SECRET=your_jwt_secret_here
+  JWT_TTL=60  # Token lifetime in minutes
+  JWT_REFRESH_TTL=20160  # Refresh token lifetime in minutes (14 days)
+  ```
+- Generate JWT secret key:
+  ```bash
+  php artisan jwt:secret
+  ```
 
 #### Protected Routes (Requires Authentication)
 - `GET /api/profile` - Get authenticated user's profile
