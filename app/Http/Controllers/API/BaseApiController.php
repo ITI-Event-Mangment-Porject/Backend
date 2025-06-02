@@ -9,12 +9,11 @@ class BaseApiController extends Controller
 {
     /**
      * Send success response
-     */
-    public function sendResponse($result, string $message = '', int $code = 200): JsonResponse
+     */    public function sendResponse($result, string $message = '', int $code = 200): JsonResponse
     {
         $response = [
             'success' => true,
-            'data'    => $result,
+            'data'    => is_array($result) ? $result : ['result' => $result],
             'message' => $message,
         ];
 

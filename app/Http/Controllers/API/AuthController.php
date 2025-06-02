@@ -30,11 +30,10 @@ class AuthController extends BaseApiController
             'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
-
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->sendResponse([
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email']),
             'access_token' => $token,
             'token_type' => 'Bearer',
         ], 'User registered successfully.');
@@ -62,19 +61,18 @@ class AuthController extends BaseApiController
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return $this->sendResponse([
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email']),
             'access_token' => $token,
             'token_type' => 'Bearer',
         ], 'User logged in successfully.');
-    }  
-    
+    }
+
     /**
      * Get authenticated user's profile
-     */
-    public function profile(Request $request)
+     */    public function profile(Request $request)
     {
         return $this->sendResponse([
-            'user' => $request->user()
+            'user' => $request->user()->only(['id', 'name', 'email'])
         ], 'Profile retrieved successfully.');
     }
 
@@ -83,9 +81,9 @@ class AuthController extends BaseApiController
      */
     public function logout(Request $request)
     {
-        $token = $request->user()->token();
+        $token = $request->user()->currentAccessToken();
         if ($token) {
-            $token->revoke();
+            $token->delete();
         }
         return $this->sendResponse([], 'User logged out successfully.');
     }
