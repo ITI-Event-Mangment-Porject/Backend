@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -14,6 +15,9 @@ use App\Http\Controllers\API\AuthController;
 | be assigned to the "api" middleware group. 
 |
 */
+Route::get('/test-connection', function () {
+    return response()->json(['status' => 'working']);
+});
 
 // Public routes
 Route::group([], function () {

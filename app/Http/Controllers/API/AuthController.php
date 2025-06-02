@@ -83,7 +83,10 @@ class AuthController extends BaseApiController
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()->token();
+        if ($token) {
+            $token->revoke();
+        }
         return $this->sendResponse([], 'User logged out successfully.');
     }
 }
