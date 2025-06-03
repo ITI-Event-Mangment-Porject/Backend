@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Company extends Model
+{
+    //
+    protected $fillable = [
+        'name', 'logo_path', 'description', 'website', 'industry',
+        'size', 'location', 'contact_email', 'contact_phone', 
+        'linkedin_url', 'is_approved', 'approved_by', 'approved_at'
+    ];
+
+    protected $casts = [
+        'is_approved' => 'boolean',
+        'approved_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function jobFairParticipations()
+    {
+        return $this->hasMany(JobFairParticipation::class);
+    }
+
+    public function interviewRequests()
+    {
+        return $this->hasMany(InterviewRequest::class);
+    }
+
+    public function interviewQueues()
+    {
+        return $this->hasMany(InterviewQueue::class);
+    }
+}
