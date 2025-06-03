@@ -12,7 +12,7 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*'],
 
     'allowed_methods' => ['*'],    'allowed_origins' => [
         env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173'),
