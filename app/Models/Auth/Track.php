@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Event\EventVisibilityTrack;
+use App\Models\Job_Fair\JobProfile;
+use App\Models\Job_Fair\JobProfileTrack;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Track extends Model
@@ -39,7 +43,7 @@ class Track extends Model
      */
     public function jobRoles()
     {
-        return $this->belongsToMany(JobRole::class, 'job_role_tracks')
+        return $this->belongsToMany(JobProfile::class, 'job_profile_track')
                     ->withPivot('preference_level')
                     ->withTimestamps();
     }

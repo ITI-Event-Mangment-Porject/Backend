@@ -2,6 +2,8 @@
 
 namespace App\Models\Feedback_and_Analytics;
 
+use App\Models\Event;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class FeedbackResponse extends Model

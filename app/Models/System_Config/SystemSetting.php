@@ -2,6 +2,7 @@
 
 namespace App\Models\System_Config;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class SystemSetting extends Model

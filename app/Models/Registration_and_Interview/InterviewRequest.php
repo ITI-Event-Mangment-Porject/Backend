@@ -2,6 +2,10 @@
 
 namespace App\Models\Registration_and_interview;
 
+use App\Models\Company;
+use App\Models\Event;
+use App\Models\Job_Fair\JobProfile;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class InterviewRequest extends Model
