@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Models\Registration_and_interview;
+
+use Illuminate\Database\Eloquent\Model;
+use App\Models\Event;
+use App\Models\User;
+
+class EventRegistration extends Model
+{
+    //
+    protected $fillable = [
+        'event_id', 'user_id', 'status', 'registration_type',
+        'registered_at', 'cancelled_at', 'cancellation_reason',
+        'checked_in_at', 'checked_in_by', 'check_in_method'
+    ];
+
+    protected $casts = [
+        'registered_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'checked_in_at' => 'datetime',
+    ];
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function checkedInBy()
+    {
+        return $this->belongsTo(User::class, 'checked_in_by');
+    }
+
+    // Helper methods
+    public function isAttended()
+    {
+        return $this->status === 'attended';
+    }
+
+    public function isCheckedIn()
+    {
+        return !is_null($this->checked_in_at);
+    }
+}
