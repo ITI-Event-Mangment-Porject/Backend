@@ -2,9 +2,10 @@
 
 namespace App\Models\Registration_and_interview;
 
-use Illuminate\Database\Eloquent\Model;
 use App\Models\Company;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+
 
 class InterviewQueue extends Model
 {

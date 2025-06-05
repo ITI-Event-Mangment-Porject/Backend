@@ -2,6 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Event\EventSession;
+use App\Models\Event\EventStaffAssignment;
+use App\Models\Event\EventVisibilityTrack;
+use App\Models\Feedback_and_Analytics\AiInsight;
+use App\Models\Feedback_and_Analytics\FeedbackForm;
+use App\Models\Feedback_and_Analytics\FeedbackResponse;
+use App\Models\Job_Fair\JobFairParticipation;
+use App\Models\Registration_and_interview\EventRegistration;
+use App\Models\Registration_and_interview\InterviewRequest;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model

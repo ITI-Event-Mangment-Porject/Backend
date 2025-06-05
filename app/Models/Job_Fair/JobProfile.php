@@ -2,6 +2,7 @@
 
 namespace App\Models\Job_Fair;
 
+use App\Models\Registration_and_interview\InterviewRequest;
 use Illuminate\Database\Eloquent\Model;
 
 class JobProfile extends Model

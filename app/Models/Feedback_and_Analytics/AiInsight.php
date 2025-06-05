@@ -2,6 +2,7 @@
 
 namespace App\Models\Feedback_and_Analytics;
 
+use App\Models\Event;
 use Illuminate\Database\Eloquent\Model;
 
 class AiInsight extends Model
