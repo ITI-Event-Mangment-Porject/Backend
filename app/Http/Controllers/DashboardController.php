@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company\Company;
-use App\Models\Event;
-use App\Models\User;
+use App\Models\Event\Event;
+use App\Models\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
