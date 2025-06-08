@@ -2,12 +2,14 @@
 
 namespace App\Models\System_Config;
 
-use App\Models\User;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SystemSetting extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'setting_key', 'setting_value', 'setting_type',
         'description', 'is_public', 'updated_by'

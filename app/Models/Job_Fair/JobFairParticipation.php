@@ -2,14 +2,16 @@
 
 namespace App\Models\Job_Fair;
 
-use App\Models\Company;
-use App\Models\Event;
-use App\Models\User;
+use App\Models\Company\Company;
+use App\Models\Event\Event;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class JobFairParticipation extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'event_id', 'company_id', 'status', 'special_requirements',
         'submitted_by', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes'
@@ -19,6 +21,10 @@ class JobFairParticipation extends Model
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\JobFairParticipationFactory::new();
+    }
 
     public function event()
     {

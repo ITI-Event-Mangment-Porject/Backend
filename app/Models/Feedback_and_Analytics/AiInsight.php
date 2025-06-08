@@ -2,12 +2,14 @@
 
 namespace App\Models\Feedback_and_Analytics;
 
-use App\Models\Event;
+use App\Models\Event\Event;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class AiInsight extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'event_id', 'insight_type', 'data', 'satisfaction_score',
         'key_themes', 'recommendations', 'generated_at'

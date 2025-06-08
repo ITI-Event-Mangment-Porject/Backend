@@ -2,15 +2,17 @@
 
 namespace App\Models\Registration_and_interview;
 
-use App\Models\Company;
-use App\Models\Event;
+use App\Models\Company\Company;
+use App\Models\Event\Event;
 use App\Models\Job_Fair\JobProfile;
-use App\Models\User;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InterviewRequest extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'event_id', 'user_id', 'job_profile_id', 'company_id',
         'status', 'message', 'requested_at', 'reviewed_at',
@@ -21,6 +23,10 @@ class InterviewRequest extends Model
         'requested_at' => 'datetime',
         'reviewed_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\InterviewRequestFactory::new();
+    }
 
     public function event()
     {
