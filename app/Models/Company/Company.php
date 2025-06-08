@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Company;
 
 use App\Models\Job_Fair\JobFairParticipation;
 use App\Models\Registration_and_interview\InterviewQueue;
 use App\Models\Registration_and_interview\InterviewRequest;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class Company extends Model
 {

@@ -2,7 +2,7 @@
 
 namespace App\Models\Job_Fair;
 
-use App\Models\Company;
+use App\Models\Company\Company;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;

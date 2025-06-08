@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MediaFile extends Model
 {
-    //
+    public $timestamps=false;
     protected $fillable = [
         'filename', 'original_name', 'file_path', 'file_size',
         'mime_type', 'file_type', 'uploaded_by', 'related_type',
