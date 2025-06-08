@@ -56,6 +56,14 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Failed to load staff dashboard', 'error' => $e->getMessage()], 500);
         }
     }
+    public function studentDashboard()
+    {
+        try {
+            return response()->json(['message' => 'Student dashboard data']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to load Student dashboard', 'error' => $e->getMessage()], 500);
+        }
+    }
 
     public function adminOverview()
     {
