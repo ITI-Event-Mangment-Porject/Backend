@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Event;
 
+use App\Models\Auth\User;
 use App\Models\Event\EventSession;
 use App\Models\Event\EventStaffAssignment;
 use App\Models\Event\EventVisibilityTrack;
@@ -11,11 +12,13 @@ use App\Models\Feedback_and_Analytics\FeedbackResponse;
 use App\Models\Job_Fair\JobFairParticipation;
 use App\Models\Registration_and_interview\EventRegistration;
 use App\Models\Registration_and_interview\InterviewRequest;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Event extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'title', 'slug', 'description', 'type', 'status', 'location',
         'start_date', 'end_date', 'start_time', 'end_time', 'banner_image',
@@ -32,6 +35,10 @@ class Event extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\EventFactory::new();
+    }
 
     public function creator()
     {

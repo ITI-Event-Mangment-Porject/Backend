@@ -2,13 +2,17 @@
 
 namespace App\Models\Registration_and_interview;
 
-use App\Models\Company;
-use App\Models\User;
+use App\Models\Company\Company;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InterviewQueue extends Model
 {
     //
+    use HasFactory;
+    protected $table = 'interview_queue';
+
     protected $fillable = [
         'interview_request_id', 'company_id', 'user_id', 'queue_position',
         'status', 'interview_started_at', 'interview_ended_at',
@@ -22,6 +26,10 @@ class InterviewQueue extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\InterviewQueueFactory::new();
+    }
 
     public function interviewRequest()
     {

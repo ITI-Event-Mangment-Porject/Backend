@@ -22,8 +22,8 @@ return new class extends Migration
             $table->boolean('is_break')->default(false);
             $table->string('break_reason')->nullable(); // lunch, prayer, etc.
             $table->boolean('is_available')->default(true);
-            $table->timestamp('created_at')->useCurrent();
-            
+            $table->timestamps();  // << Add this line
+    
             $table->index(['participation_id', 'slot_date', 'start_time']);
         });
     }

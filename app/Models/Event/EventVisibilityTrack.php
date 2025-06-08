@@ -2,13 +2,15 @@
 
 namespace App\Models\Event;
 
-use App\Models\Event;
-use App\Models\Track;
+use App\Models\Event\Event;
+use App\Models\Auth\Track;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EventVisibilityTrack extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'event_id', 'track_id'
     ];

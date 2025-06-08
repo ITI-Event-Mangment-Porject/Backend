@@ -2,13 +2,15 @@
 
 namespace App\Models\Feedback_and_Analytics;
 
-use App\Models\Event;
-use App\Models\User;
+use App\Models\Event\Event;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class FeedbackResponse extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'form_id', 'user_id', 'event_id', 'responses',
         'overall_rating', 'submitted_at'
@@ -19,6 +21,10 @@ class FeedbackResponse extends Model
         'overall_rating' => 'integer',
         'submitted_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\FeedbackResponseFactory::new();
+    }
 
     public function form()
     {

@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('job_profile_tracks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('job_role_id')->constrained('job_profiles')->onDelete('cascade');
+            $table->foreignId('job_profile_id')->constrained()->onDelete('cascade');
             $table->foreignId('track_id')->constrained()->onDelete('cascade');
             $table->enum('preference_level', ['required', 'preferred', 'acceptable'])->default('preferred');
             $table->timestamp('created_at')->useCurrent();
             
-            $table->unique(['job_role_id', 'track_id'], 'unique_job_track');
-            $table->index('job_role_id');
+            $table->unique(['job_profile_id', 'track_id'], 'unique_job_track');
+            $table->index('job_profile_id');
             $table->index('track_id');
         });
     }
