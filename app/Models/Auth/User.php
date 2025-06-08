@@ -12,12 +12,12 @@ use App\Models\Notifications_and_Messaging\Notification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 use app\Models\Registration_and_Interview\InterviewRequest;
 use app\Models\Registration_and_Interview\InterviewQueue;
 use app\Models\Registration_and_Interview\EventRegistration;
 use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
-
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */

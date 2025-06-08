@@ -8,6 +8,8 @@ use App\Models\Job_Fair\JobProfileTrack;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+
+
 class Track extends Model
 {
     //

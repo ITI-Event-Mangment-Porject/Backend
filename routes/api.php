@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\CompanyController;
 
 
 /*
@@ -93,4 +96,42 @@ Route::group(['middleware' => ['auth:api']], function () {    // User profile ro
     //     Route::patch('/{user}/role', [UserController::class, 'updateRole']); // Update role
     // });
     */
+});
+
+//companyController still need admin middleware 
+Route::prefix('companies')->group(function () {
+    Route::post('/', [CompanyController::class, 'store']);
+    Route::get('/', [CompanyController::class, 'index']);
+    Route::get('/{id}', [CompanyController::class, 'show']);
+    Route::put('/{id}', [CompanyController::class, 'update']);
+    Route::post('/{id}/approve', [CompanyController::class, 'approve']);
+    Route::post('/{id}/reject', [CompanyController::class, 'reject']);
+    Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
+
+});
+
+// media controller 
+Route::prefix('media')->group(function () {
+    Route::post('/upload', [MediaController::class, 'upload']);
+    Route::get('/{id}', [MediaController::class, 'download']);
+    Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
+    Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
+});
+
+// dashboard controller
+Route::middleware(['auth'])->prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index']);
+    Route::get('/admin', [DashboardController::class, 'adminDashboard']);
+    Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
+    Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
+    
+    // admin subroutes
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/overview', [DashboardController::class, 'adminOverview']);
+        Route::get('/events', [DashboardController::class, 'adminEvents']);
+        Route::get('/users', [DashboardController::class, 'adminUsers']);
+        Route::get('/companies', [DashboardController::class, 'adminCompanies']);
+        Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
+    });
+
 });

@@ -3,6 +3,8 @@
 namespace App\Models\Job_Fair;
 
 use App\Models\Company\Company;
+use App\Models\Event;
+use App\Models\User;
 use App\Models\Event\Event;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

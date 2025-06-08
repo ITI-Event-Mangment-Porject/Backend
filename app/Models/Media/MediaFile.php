@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class MediaFile extends Model
 {
-    //
+
+    public $timestamps=false;
     use HasFactory;
     protected $fillable = [
         'filename', 'original_name', 'file_path', 'file_size',
