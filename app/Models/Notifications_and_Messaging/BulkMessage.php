@@ -2,12 +2,14 @@
 
 namespace App\Models\Notifications_and_Messaging;
 
-use App\Models\User;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class BulkMessage extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'title', 'message', 'target_criteria', 'sent_by',
         'total_recipients', 'sent_count', 'failed_count',

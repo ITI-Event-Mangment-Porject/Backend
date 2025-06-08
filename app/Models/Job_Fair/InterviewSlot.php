@@ -2,11 +2,13 @@
 
 namespace App\Models\Job_Fair;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InterviewSlot extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'participation_id', 'slot_date', 'start_time', 'end_time',
         'duration_minutes', 'max_interviews_per_slot', 'is_break',
@@ -21,6 +23,10 @@ class InterviewSlot extends Model
         'is_available' => 'boolean',
         'created_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\InterviewSlotFactory::new();
+    }
 
     public function participation()
     {

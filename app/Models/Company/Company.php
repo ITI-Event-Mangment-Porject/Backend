@@ -2,15 +2,18 @@
 
 namespace App\Models\Company;
 
+use App\Models\Auth\User;
 use App\Models\Job_Fair\JobFairParticipation;
 use App\Models\Registration_and_interview\InterviewQueue;
 use App\Models\Registration_and_interview\InterviewRequest;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
 class Company extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'name', 'logo_path', 'description', 'website', 'industry',
         'size', 'location', 'contact_email', 'contact_phone', 
@@ -23,6 +26,11 @@ class Company extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\CompanyFactory::new();
+    }
 
     public function approvedBy()
     {

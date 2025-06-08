@@ -2,14 +2,15 @@
 
 namespace App\Models\Media;
 
-use App\Models\User;
+use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class MediaFile extends Model
 {
-    use HasFactory;
+
     public $timestamps=false;
+    use HasFactory;
     protected $fillable = [
         'filename', 'original_name', 'file_path', 'file_size',
         'mime_type', 'file_type', 'uploaded_by', 'related_type',

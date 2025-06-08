@@ -2,12 +2,14 @@
 
 namespace App\Models\Notifications_and_Messaging;
 
-use App\Models\User;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Notification extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'user_id', 'title', 'message', 'type', 'related_id',
         'related_type', 'is_read', 'sent_via', 'read_at'
@@ -19,6 +21,10 @@ class Notification extends Model
         'created_at' => 'datetime',
         'read_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\NotificationFactory::new();
+    }
 
     public function user()
     {

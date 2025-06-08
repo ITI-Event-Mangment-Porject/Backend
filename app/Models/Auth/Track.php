@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Auth;
 
 use App\Models\Event\EventVisibilityTrack;
 use App\Models\Job_Fair\JobProfile;
@@ -29,6 +29,10 @@ class Track extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\TrackFactory::new();
+    }
 
     // ============ RELATIONSHIPS ============
 

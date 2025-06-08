@@ -2,13 +2,15 @@
 
 namespace App\Models\Registration_and_interview;
 
-use App\Models\Event;
-use App\Models\User;
+use App\Models\Event\Event;
+use App\Models\Auth\User;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EventRegistration extends Model
 {
     //
+    use HasFactory;
     protected $fillable = [
         'event_id', 'user_id', 'status', 'registration_type',
         'registered_at', 'cancelled_at', 'cancellation_reason',
@@ -20,6 +22,10 @@ class EventRegistration extends Model
         'cancelled_at' => 'datetime',
         'checked_in_at' => 'datetime',
     ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\EventRegistrationFactory::new();
+    }
 
     public function event()
     {

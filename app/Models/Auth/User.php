@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Auth;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Models\Event\Event;
 use App\Models\Event\EventStaffAssignment;
 use App\Models\Feedback_and_Analytics\FeedbackResponse;
 use App\Models\Media\MediaFile;
@@ -61,18 +62,20 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'is_active' => 'boolean',
-            'last_login_at' => 'datetime',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-            'intake_year' => 'integer',
-            'graduation_year' => 'integer',
-        ];
-    }
     
+    protected $casts = [
+        'is_active' => 'boolean',
+        'last_login_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'intake_year' => 'integer',
+        'graduation_year' => 'integer',
+    ];
+    protected static function newFactory()
+    {
+        return \Database\Factories\UserFactory::new();
+    }
+
       /**
      * User's track
      */
