@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\SettingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
@@ -122,9 +123,10 @@ Route::prefix('media')->group(function () {
 Route::middleware(['auth'])->prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'index']);
     Route::get('/admin', [DashboardController::class, 'adminDashboard']);
+    Route::get('/student', [DashboardController::class, 'studentDashboard']);
     Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
     Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
-    
+
     // admin subroutes
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/overview', [DashboardController::class, 'adminOverview']);
@@ -134,4 +136,11 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
     });
 
+});
+
+//setting controller  missing middleware of admin
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SettingController::class, 'index']);
+    Route::put('/{key}', [SettingController::class, 'update']);
+    Route::get('/public', [SettingController::class, 'getPublic']);
 });

@@ -3412,7 +3412,6 @@
             "time": "2025-06-01T06:28:46+00:00"
         },
         {
-
             "name": "spatie/laravel-permission",
             "version": "6.19.0",
             "source": {
