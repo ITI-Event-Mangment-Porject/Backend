@@ -9,14 +9,14 @@ use App\Models\Event\EventStaffAssignment;
 use App\Models\Feedback_and_Analytics\FeedbackResponse;
 use App\Models\Media\MediaFile;
 use App\Models\Notifications_and_Messaging\Notification;
+use App\Models\Auth\Track;
+use App\Models\Registration_and_Interview\InterviewRequest;
+use App\Models\Registration_and_Interview\InterviewQueue;
+use App\Models\Registration_and_Interview\EventRegistration;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
-use app\Models\Registration_and_Interview\InterviewRequest;
-use app\Models\Registration_and_Interview\InterviewQueue;
-use app\Models\Registration_and_Interview\EventRegistration;
-use Spatie\Permission\Contracts\Role;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
@@ -84,15 +84,6 @@ class User extends Authenticatable
         return $this->belongsTo(Track::class);
     }
 
-    /**
-     * User roles relationship
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot(['assigned_by', 'assigned_at', 'is_active'])
-                    ->wherePivot('is_active', true);
-    }
     public function eventRegistrations()
     {
         return $this->hasMany(EventRegistration::class);
