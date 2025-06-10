@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Media\MediaFile;
 use Auth;
-use Dotenv\Exception\ValidationException;
+// use Dotenv\Exception\ValidationException;
+use Illuminate\Validation\ValidationException;
 use Exception;
 
 use Illuminate\Database\Eloquent\ModelNotFoundException;
