@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Notifications_and_Messaging;
+namespace App\Models\NotificationsAndMessaging;
 
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

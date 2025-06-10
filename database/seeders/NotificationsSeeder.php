@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Notifications_and_Messaging\Notification;
-use App\Models\Notifications_and_Messaging\BulkMessage;
+use App\Models\NotificationsAndMessaging\Notification;
+use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Models\Auth\User;
 use Illuminate\Database\Seeder;
 

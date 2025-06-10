@@ -13,7 +13,7 @@ class DashboardController extends Controller
     public function index()
     {
         try {
-            $user = Auth::user()??2;
+            $user = Auth::user() ?? 2;
             if (!$user) {
                 return response()->json(['message' => 'Unauthenticated'], 401);
             }
@@ -30,19 +30,48 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Failed to load dashboard', 'error' => $e->getMessage()], 500);
         }
     }
-    public function adminDashboard()
-    {
-        try {
-            return response()->json(['message' => 'Admin dashboard data']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to load admin dashboard', 'error' => $e->getMessage()], 500);
-        }
-    }
 
     public function companyDashboard()
     {
         try {
-            return response()->json(['message' => 'Company dashboard data']);
+            $user = Auth::user() ?? 1;
+            $company = Company::where('approved_by', Auth::user() ?? 1)->with(
+                [
+                    'jobFairParticipations.event',
+                    'interviewRequests.student',
+                    'interviewQueues',
+                ]
+            )->first();
+            if (!$company) {
+                return response()->json(['message' => 'Company not found'], 404);
+            }
+            return response()->json([
+                'company_profile' => $company->only([
+                    'name',
+                    'description',
+                    'logo_path',
+                    'industry',
+                    'website',
+                    'size',
+                    'location'
+                ]),
+                'job_fair_participation' => $company->jobFairParticipations,
+                'interview_requests' => $company->interviewRequests->map(function ($request) {
+                    return [
+                        'student' => $request->student->only(['first_name', 'last_name', 'email']),
+                        'status' => $request->status,
+                        'preferred_slot' => $request->preferred_slot,
+                    ];
+                }),
+                'interview_tracking' => $company->interviewQueues->map(function ($queue) {
+                    return [
+                        'student' => $queue->student->only(['first_name', 'last_name']),
+                        'notes' => $queue->notes,
+                        'rating' => $queue->rating,
+                        'follow_up' => $queue->follow_up,
+                    ];
+                }),
+            ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to load company dashboard', 'error' => $e->getMessage()], 500);
         }
@@ -51,7 +80,26 @@ class DashboardController extends Controller
     public function staffDashboard()
     {
         try {
-            return response()->json(['message' => 'Staff dashboard data']);
+            $user = Auth::user() ?? User::find(2);
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            $assignedEvents = $user->staffAssignments()->with('event')->get();
+            $recentCreatedEvents = $user->createdEvents()->latest()->take(5)->get();
+            $feedbackCount = $user->feedbackResponses()->count();
+            $notifications = $user->notifications()->latest()->take(5)->get();
+
+            return response()->json([
+                'message' => 'Staff dashboard data',
+                'data' => [
+                    'full_name' => $user->full_name,
+                    'assigned_events' => $assignedEvents,
+                    'recent_created_events' => $recentCreatedEvents,
+                    'feedback_count' => $feedbackCount,
+                    'recent_notifications' => $notifications,
+                ],
+            ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to load staff dashboard', 'error' => $e->getMessage()], 500);
         }
@@ -59,7 +107,35 @@ class DashboardController extends Controller
     public function studentDashboard()
     {
         try {
-            return response()->json(['message' => 'Student dashboard data']);
+            $user = Auth::user() ?? User::find(100);
+            if (!$user) {
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            $eventRegistrations = $user->eventRegistrations()->with('event')->latest()->take(5)->get();
+            $interviewRequests = $user->interviewRequests()->latest()->take(5)->get();
+            $feedbackCount = $user->feedbackResponses()->count();
+            $notifications = $user->notifications()->latest()->take(5)->get();
+
+            return response()->json([
+                'message' => 'Student dashboard data',
+                'data' => [
+                    'student_data' => [
+                        'full_name' => $user->full_name,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'linkedin_url' => $user->linkedin_url,
+                        'github_url' => $user->github_url,
+                        'graduation_year' => $user->graduation_year,
+                        'profile_image' => $user->profile_image
+                    ],
+
+                    'recent_event_registrations' => $eventRegistrations,
+                    'recent_interview_requests' => $interviewRequests,
+                    'feedback_count' => $feedbackCount,
+                    'recent_notifications' => $notifications,
+                ],
+            ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to load Student dashboard', 'error' => $e->getMessage()], 500);
         }
@@ -69,18 +145,29 @@ class DashboardController extends Controller
     {
         try {
             $usersCount = User::count();
+            $companies = Company::where('is_approved', true)->get();
             $companiesCount = Company::count();
             $approvedCompanies = Company::where('is_approved', true)->count();
             $eventsCount = Event::count();
+            $activeEvents = Event::where('start_time', '<=', now())
+                ->where('end_time', '>=', now())->count();
 
             return response()->json([
-                'users' => $usersCount,
-                'companies' => $companiesCount,
-                'approved_companies' => $approvedCompanies,
-                'events' => $eventsCount,
+                'message' => 'Admin dashboard data',
+                'stats' => [
+                    'total_users' => $usersCount,
+                    'approved_companies_data' => $companies,
+                    'total_companies' => $companiesCount,
+                    'approved_companies' => $approvedCompanies,
+                    'total_events' => $eventsCount,
+                    'active_events' => $activeEvents,
+                ],
             ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to load overview stats', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Failed to load admin dashboard',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 

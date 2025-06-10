@@ -3,9 +3,9 @@
 namespace App\Models\Company;
 
 use App\Models\Auth\User;
-use App\Models\Job_Fair\JobFairParticipation;
-use App\Models\Registration_and_interview\InterviewQueue;
-use App\Models\Registration_and_interview\InterviewRequest;
+use App\Models\JobFair\JobFairParticipation;
+use App\Models\RegistrationAndInterview\InterviewQueue;
+use App\Models\RegistrationAndInterview\InterviewRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 

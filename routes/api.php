@@ -123,12 +123,11 @@ Route::prefix('media')->group(function () {
 });
 
 // dashboard controller
-Route::middleware(['auth'])->prefix('dashboard')->group(function () {
+Route::prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'index']);
-    Route::get('/admin', [DashboardController::class, 'adminDashboard']);
     Route::get('/student', [DashboardController::class, 'studentDashboard']);
-    Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
-    Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
+    Route::get('/company', [DashboardController::class, 'companyDashboard']);
+    Route::get('/staff', [DashboardController::class, 'staffDashboard']);
 
     // admin subroutes
     Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {

@@ -1,11 +1,10 @@
 <?php
 
 namespace Database\Factories;
-
-use App\Models\Registration_and_interview\InterviewRequest;
+use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\Event\Event;
 use App\Models\Auth\User;
-use App\Models\Job_Fair\JobProfile;
+use App\Models\JobFair\JobProfile;
 use App\Models\Company\Company;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

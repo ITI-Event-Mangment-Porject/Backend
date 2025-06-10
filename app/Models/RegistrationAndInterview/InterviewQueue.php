@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Registration_and_interview;
+namespace App\Models\RegistrationAndInterview;
 
 use App\Models\Company\Company;
 use App\Models\Auth\User;

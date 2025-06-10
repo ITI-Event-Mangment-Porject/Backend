@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Event\Event;
 use App\Models\Event\EventSession;
-use App\Models\Registration_and_interview\EventRegistration;
+use App\Models\RegistrationAndInterview\EventRegistration;
 use App\Models\Event\EventStaffAssignment;
 use App\Models\Auth\User;
 use App\Models\Auth\Track;
