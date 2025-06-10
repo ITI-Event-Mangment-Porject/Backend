@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Job_Fair\JobFairParticipation;
-use App\Models\Job_Fair\InterviewSlot;
+use App\Models\JobFair\JobFairParticipation;
+use App\Models\JobFair\InterviewSlot;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 

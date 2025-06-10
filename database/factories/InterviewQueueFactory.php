@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Registration_and_interview\InterviewQueue;
-use App\Models\Registration_and_interview\InterviewRequest;
+use App\Models\RegistrationAndInterview\InterviewQueue;
+use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\Company\Company;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

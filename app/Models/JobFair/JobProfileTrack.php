@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Job_Fair;
+namespace App\Models\JobFair;
 
 use App\Models\Auth\Track;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

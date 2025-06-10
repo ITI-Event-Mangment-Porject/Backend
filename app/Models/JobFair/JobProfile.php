@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Models\Job_Fair;
+namespace App\Models\JobFair;
 
-use App\Models\Registration_and_interview\InterviewRequest;
+use App\Models\RegistrationAndInterview\InterviewRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 

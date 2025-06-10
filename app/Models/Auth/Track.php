@@ -3,8 +3,8 @@
 namespace App\Models\Auth;
 
 use App\Models\Event\EventVisibilityTrack;
-use App\Models\Job_Fair\JobProfile;
-use App\Models\Job_Fair\JobProfileTrack;
+use App\Models\JobFair\JobProfile;
+use App\Models\JobFair\JobProfileTrack;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 

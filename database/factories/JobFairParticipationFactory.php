@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Job_Fair\JobFairParticipation;
+use App\Models\JobFair\JobFairParticipation;
 use App\Models\Event\Event;
 use App\Models\Company\Company;
 use App\Models\Auth\User;
