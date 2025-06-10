@@ -17,9 +17,12 @@ class AuthController extends BaseApiController
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name'=>'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            
             'password' => 'required|string|min:8|confirmed',
+            'portal_user_id'=>'required|integer'
         ]);
 
         if ($validator->fails()) {
@@ -27,9 +30,12 @@ class AuthController extends BaseApiController
         }
 
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $request->first_name,
+            'last_name'=>$request->last_name,
             'email' => $request->email,
+            'portal_user_id'=>$request->portal_user_id,
             'password' => Hash::make($request->password)]);
+            
 
         $token = JWTAuth::fromUser($user);
 
@@ -37,8 +43,10 @@ class AuthController extends BaseApiController
             'user' => $user->only(['id', 'name', 'email']),
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60
+            'expires_in' => JWTAuth::factory()->getTTL() * 60,
+            'expires_at' => now()->addMinutes((float) config('jwt.ttl'))->toDateTimeString()
         ], 'User registered successfully.');
+        
     }
 
     /**

@@ -16,9 +16,10 @@ use Illuminate\Notifications\Notifiable;
 use app\Models\Registration_and_Interview\InterviewRequest;
 use app\Models\Registration_and_Interview\InterviewQueue;
 use app\Models\Registration_and_Interview\EventRegistration;
-use Spatie\Permission\Contracts\Role;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
-class User extends Authenticatable
+use Tymon\JWTAuth\Contracts\JWTSubject;
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles ;
@@ -142,5 +143,14 @@ class User extends Authenticatable
     public function getFullNameAttribute()
     {
         return $this->first_name . ' ' . $this->last_name;
+    }
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
     }
 }
