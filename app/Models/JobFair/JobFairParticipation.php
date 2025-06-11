@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Job_Fair;
+namespace App\Models\JobFair;
 
 use App\Models\Company\Company;
 use App\Models\Event\Event;

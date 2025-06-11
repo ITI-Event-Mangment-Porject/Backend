@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Feedback_and_Analytics\FeedbackResponse;
-use App\Models\Feedback_and_Analytics\FeedbackForm;
+use App\Models\FeedbackAndAnalytics\FeedbackResponse;
+use App\Models\FeedbackAndAnalytics\FeedbackForm;
 use App\Models\Auth\User;
 use App\Models\Event\Event;
 use Illuminate\Database\Eloquent\Factories\Factory;

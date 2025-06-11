@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Models\Registration_and_interview;
+namespace App\Models\RegistrationAndInterview;
 
 use App\Models\Company\Company;
 use App\Models\Event\Event;
-use App\Models\Job_Fair\JobProfile;
+use App\Models\JobFair\JobProfile;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
