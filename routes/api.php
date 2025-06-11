@@ -1,8 +1,11 @@
 <?php
 
+use App\Http\Controllers\API\Events\JobFairController;
+use App\Http\Controllers\API\Events\JobFairParticipationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
@@ -134,4 +137,23 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
     });
 
+});
+
+ // Job Fair Controllers
+Route::prefix('job-fairs')->group(function(){
+    Route::get('/', [JobFairController::class, 'index']);
+    Route::get('/{id}', [JobFairController::class, 'show']);
+    Route::post('/', [JobFairController::class, 'store']);
+    Route::put('/{id}', [JobFairController::class, 'update']);
+    Route::delete('/{id}', [JobFairController::class, 'destroy']);
+    Route::get('/{id}/companies', [JobFairController::class, 'Companies']);
+    Route::get('/{id}/statistics', [JobFairController::class, 'statistics']);
+    // Company submits participation
+    Route::post('/{id}/participate', [JobFairParticipationController::class, 'store']);
+    // Admin views allparticipations
+    Route::get('/{id}/participations', [JobFairParticipationController::class, 'index']);
+    // Admin views a specific participation
+    Route::get('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
+    // Admin approves/rejects
+    Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
 });
