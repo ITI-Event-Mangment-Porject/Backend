@@ -3,6 +3,20 @@
 namespace App\Http;
 
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
+use Illuminate\Http\Request;
+
+use App\Http\Middleware\RedirectIfUnauthenticatedToPortal;
+use Tymon\JWTAuth\Http\Middleware\Authenticate as JwtAuthenticate;
+use Tymon\JWTAuth\Http\Middleware\RefreshToken as JwtRefreshToken;
+use Tymon\JWTAuth\Http\Middleware\CheckForToken as JwtCheckForToken;
+use Tymon\JWTAuth\Http\Middleware\AuthenticateAndRenew as JwtAuthenticateAndRenew;
+use Tymon\JWTAuth\Http\Middleware\AuthenticateWithBasicAuth as JwtAuthenticateWithBasicAuth;
+use Tymon\JWTAuth\Http\Middleware\CheckForTokenInRequest as JwtCheckForTokenInRequest;
+use Tymon\JWTAuth\Http\Middleware\RefreshTokenInRequest as JwtRefreshTokenInRequest;
+use Tymon\JWTAuth\Http\Middleware\AuthenticateAndRenewInRequest as JwtAuthenticateAndRenewInRequest;
+use Tymon\JWTAuth\Http\Middleware\AuthenticateWithBasicAuthInRequest as JwtAuthenticateWithBasicAuthInRequest;
+use Tymon\JWTAuth\Http\Middleware\AuthenticateWithBearerToken as JwtAuthenticateWithBearerToken;
+use Tymon\JWTAuth\Http\Middleware\CheckForBearerToken as JwtCheckForBearerToken;
 
 class Kernel extends HttpKernel
 {
@@ -50,6 +64,9 @@ class Kernel extends HttpKernel
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'redirect.to.portal' => \App\Http\Middleware\RedirectIfUnauthenticatedToPortal::class,
+        'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+
         
     ];
 }
