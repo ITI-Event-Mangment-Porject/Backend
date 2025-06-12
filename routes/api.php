@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 
+use App\Http\Controllers\Event\EventController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -56,28 +59,27 @@ Route::group([], function () {
 });
 
 // Protected routes (requires authentication)
-Route::group(['middleware' => ['auth:api']], function () {    // User profile routes
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
     Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
+});
+
+// Protected routes (requires authentication and role-based access)
+Route::group( [],function () {    // User profile routes
+    // Route::middleware(['jwt.auth'])->get('/profile', [AuthController::class, 'profile']);
+    // Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::post('/refresh', [AuthController::class, 'refresh']);
 
     /*
     |--------------------------------------------------------------------------
     | Example Event Routes (commented out)
     |--------------------------------------------------------------------------
     |
-    // Route::prefix('events')->group(function () {
-    //     Route::get('/', [EventController::class, 'index']);     // Get all events
-    //     Route::post('/', [EventController::class, 'store']);    // Create event
-    //     Route::get('/{event}', [EventController::class, 'show']);    // Get single event
-    //     Route::put('/{event}', [EventController::class, 'update']);  // Update event
-    //     Route::delete('/{event}', [EventController::class, 'destroy']); // Delete event
-    //     
-    //     // Event registration
-    //     Route::post('/{event}/register', [EventController::class, 'register']);
-    //     Route::delete('/{event}/cancel', [EventController::class, 'cancelRegistration']);
-    // });
-
+    */
+   
+    /*
     |--------------------------------------------------------------------------
     | Example Category Routes (commented out)
     |--------------------------------------------------------------------------
