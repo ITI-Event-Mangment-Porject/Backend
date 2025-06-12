@@ -20,10 +20,24 @@ class Event extends Model
     //
     use HasFactory;
     protected $fillable = [
-        'title', 'slug', 'description', 'type', 'status', 'location',
-        'start_date', 'end_date', 'start_time', 'end_time', 'banner_image',
-        'registration_deadline', 'visibility_type', 'visibility_config',
-        'slido_qr_code', 'slido_embed_url', 'created_by', 'archived_at'
+        'title',
+        'slug',
+        'description',
+        'type',
+        'status',
+        'location',
+        'start_date',
+        'end_date',
+        'start_time',
+        'end_time',
+        'banner_image',
+        'registration_deadline',
+        'visibility_type',
+        'visibility_config',
+        'slido_qr_code',
+        'slido_embed_url',
+        'created_by',
+        'archived_at'
     ];
 
     protected $casts = [
@@ -99,5 +113,13 @@ class Event extends Model
     public function isActive()
     {
         return in_array($this->status, ['published', 'ongoing']);
+    }
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['published', 'ongoing'])
+                     ->where(function ($query) {
+                         $query->whereNull('archived_at')
+                               ->orWhere('archived_at', '>', now());
+                     });
     }
 }
