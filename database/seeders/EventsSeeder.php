@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Event\Event;
 use App\Models\Event\EventSession;
-use App\Models\Registration_and_interview\EventRegistration;
+use App\Models\RegistrationAndInterview\EventRegistration;
 use App\Models\Event\EventStaffAssignment;
 use App\Models\Auth\User;
 use App\Models\Auth\Track;
@@ -112,8 +112,8 @@ class EventsSeeder extends Seeder
             }
         }
 
-        // Create event visibility tracks
-        foreach ([$jobFair, $techEvent] as $event) {
+        // Add visibility tracks to all track-based events
+        foreach (Event::where('visibility_type', 'track_based')->get() as $event) {
             foreach ($tracks->random(3) as $track) {
                 \DB::table('event_visibility_tracks')->insert([
                     'event_id' => $event->id,
@@ -122,5 +122,6 @@ class EventsSeeder extends Seeder
                 ]);
             }
         }
+
     }
 }

@@ -6,16 +6,16 @@ namespace App\Models\Auth;
 
 use App\Models\Event\Event;
 use App\Models\Event\EventStaffAssignment;
-use App\Models\Feedback_and_Analytics\FeedbackResponse;
+use App\Models\FeedbackAndAnalytics\FeedbackResponse;
 use App\Models\Media\MediaFile;
-use App\Models\Notifications_and_Messaging\Notification;
+use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-use app\Models\Registration_and_Interview\InterviewRequest;
-use app\Models\Registration_and_Interview\InterviewQueue;
-use app\Models\Registration_and_Interview\EventRegistration;
+use app\Models\RegistrationAndInterview\InterviewRequest;
+use app\Models\RegistrationAndInterview\InterviewQueue;
+use app\Models\RegistrationAndInterview\EventRegistration;
 use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable

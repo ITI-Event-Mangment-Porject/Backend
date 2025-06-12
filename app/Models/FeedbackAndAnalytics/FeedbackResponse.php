@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\Feedback_and_Analytics;
+namespace App\Models\FeedbackAndAnalytics;
 
 use App\Models\Event\Event;
 use App\Models\Auth\User;

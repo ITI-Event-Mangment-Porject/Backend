@@ -1,8 +1,8 @@
 <?php
 namespace Database\Factories;
 
-use App\Models\Job_Fair\JobProfile;
-use App\Models\Job_Fair\JobFairParticipation;
+use App\Models\JobFair\JobProfile;
+use App\Models\JobFair\JobFairParticipation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class JobProfileFactory extends Factory
