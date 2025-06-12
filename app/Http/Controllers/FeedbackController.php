@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Feedback_and_Analytics\FeedbackForm;
-use App\Models\Feedback_and_Analytics\FeedbackResponse;
+use App\Models\FeedbackAndAnalytics\FeedbackForm;
+use App\Models\FeedbackAndAnalytics\FeedbackResponse;
 use App\Models\Event\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -11,9 +11,6 @@ use Illuminate\Http\JsonResponse;
 
 class FeedbackController extends Controller
 {
-    
-    // Get feedback forms for a specific event
-     
     public function getEventFeedbackForms($eventId): JsonResponse
     {
         $event = Event::find($eventId);
@@ -29,19 +26,11 @@ class FeedbackController extends Controller
         return response()->json($forms);
     }
 
-    
-      //Create new feedback form (Admin only)
-     
     public function createFeedbackForm(Request $request, $eventId): JsonResponse
     {
-        // Check event exists
-        if (!Event::find($eventId)) {
+        $event = Event::find($eventId);
+        if (!$event) {
             return response()->json(['error' => 'Event not found'], 404);
-        }
-
-        // Check admin permission
-        if (!auth()->user()->is_admin) {
-            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -65,19 +54,11 @@ class FeedbackController extends Controller
         return response()->json($form, 201);
     }
 
-    
-    //  Submit feedback response (Students)
-    
     public function submitFeedbackResponse(Request $request, $formId): JsonResponse
     {
         $form = FeedbackForm::find($formId);
         if (!$form || !$form->is_active) {
             return response()->json(['error' => 'Form not found or inactive'], 404);
-        }
-
-        // Check if user already submitted response
-        if (FeedbackResponse::where('form_id', $formId)->where('user_id', auth()->id())->exists()) {
-            return response()->json(['error' => 'Response already submitted'], 409);
         }
 
         $validator = Validator::make($request->all(), [
@@ -100,16 +81,8 @@ class FeedbackController extends Controller
         return response()->json($response, 201);
     }
 
-    
-    //  Get feedback responses (Admin only)
-     
     public function getFeedbackResponses($formId): JsonResponse
     {
-        // Check admin permission
-        if (!auth()->user()->is_admin) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $form = FeedbackForm::find($formId);
         if (!$form) {
             return response()->json(['error' => 'Form not found'], 404);
@@ -128,15 +101,8 @@ class FeedbackController extends Controller
         ]);
     }
 
-    
-    //   Toggle form status (activate/deactivate)
-     
     public function toggleFeedbackForm($formId): JsonResponse
     {
-        if (!auth()->user()->is_admin) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
         $form = FeedbackForm::find($formId);
         if (!$form) {
             return response()->json(['error' => 'Form not found'], 404);

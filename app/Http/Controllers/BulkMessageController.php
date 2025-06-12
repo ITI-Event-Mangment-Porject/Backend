@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Communication;
+namespace App\Http\Controllers;
 
 use App\Models\Notifications_and_Messaging\BulkMessage;
 use App\Http\Controllers\Controller;

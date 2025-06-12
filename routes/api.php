@@ -197,19 +197,16 @@ Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
 
     // Get feedback forms for an event (all users)
     Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
-
     // Create feedback form (admin only)
     Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
-
     // Submit feedback response (students)
     Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
-
     // Get feedback responses (admin only)
     Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
-
     // Toggle form status (admin only)
     Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
 });
+
 
 
 
