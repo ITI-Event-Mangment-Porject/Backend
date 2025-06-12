@@ -104,13 +104,13 @@ Route::group(['middleware' => ['auth:api']], function () {    // User profile ro
 Route::prefix('companies')->group(function () {
     Route::get('/', [CompanyController::class, 'index']);
     Route::get('/{id}', [CompanyController::class, 'show']);
-    Route::middleware('role:admin')->group(function () {
-        Route::post('/', [CompanyController::class, 'store']);
-        Route::put('/{id}', [CompanyController::class, 'update']);
-        Route::post('/{id}/approve', [CompanyController::class, 'approve']);
-        Route::post('/{id}/reject', [CompanyController::class, 'reject']);
-        Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
-    });
+
+    Route::post('/', [CompanyController::class, 'store']);
+    Route::put('/{id}', [CompanyController::class, 'update']);
+    Route::post('/{id}/approve', [CompanyController::class, 'approve']);
+    Route::post('/{id}/reject', [CompanyController::class, 'reject']);
+    Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
+
 
 });
 
