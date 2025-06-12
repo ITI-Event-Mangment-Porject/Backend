@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\BulkMessageController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -133,5 +136,27 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
         Route::get('/companies', [DashboardController::class, 'adminCompanies']);
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
     });
+
+
+
+
+// Notifications Routes 
+Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+});
+
+// Bulk Messages Routes 
+Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/', [BulkMessageController::class, 'index']);
+    Route::post('/', [BulkMessageController::class, 'store']);
+    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
+    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+});
+
+
+
 
 });
