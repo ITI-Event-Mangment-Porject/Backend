@@ -148,21 +148,11 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
 
 }); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
 
-// Notifications Routes 
-Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
-    Route::get('/', [NotificationController::class, 'index']);
-    Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
-    Route::delete('/{id}', [NotificationController::class, 'destroy']);
-    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-});
 
-// // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::get('/', [BulkMessageController::class, 'index']);
-    Route::post('/', [BulkMessageController::class, 'store']);
-    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
-    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
-});
+
+
+
+
 
 
 
@@ -205,6 +195,25 @@ Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
     Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
     // Toggle form status (admin only)
     Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
+});
+
+
+// Notifications Routes 
+Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+});
+
+
+
+// Bulk Messages Routes 
+Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/', [BulkMessageController::class, 'index']);
+    Route::post('/', [BulkMessageController::class, 'store']);
+    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
+    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
 });
 
 
