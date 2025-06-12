@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\Company\Company;
 use App\Models\Event\Event;
 use App\Models\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class DashboardController extends Controller
+class DashboardController extends BaseApiController
 {
     public function index()
     {
@@ -24,7 +25,7 @@ class DashboardController extends Controller
                 'student' => redirect('/api/dashboard/student'),
                 'company' => redirect('/api/dashboard/company'),
                 'staff' => redirect('/api/dashboard/staff'),
-                default => response()->json(['message' => 'Role not recognized'], 403),
+                default=>$this->sendResponse('Role not Recognized','Role not recognized',403),
             };
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to load dashboard', 'error' => $e->getMessage()], 500);

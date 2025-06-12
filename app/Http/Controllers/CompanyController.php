@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 
 
 use App\Http\Requests\StoreCompanyRequest;
+use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
+
 use Auth;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -32,27 +35,20 @@ class CompanyController extends BaseApiController
     public function index(Request $request)
     {
         try {
-            // using qruey so that i can filter the response
-            $query = Company::query();
-            if ($request->has('is_approved')) {
-                $query->where('is_approved', $request->boolean('is_approved'));
-            }
-
-            if ($request->has('industry')) {
-                $query->where('industry', $request->industry);
-            }
-
-            if ($request->has('size')) {
-                $query->where('size', $request->size);
-            }
-            $companies = $query->latest()->get();
-
+            // i select all fileds from company and like i make where condition on it .
+            $companies = QueryBuilder::for(Company::class)
+                ->allowedFilters([
+                    AllowedFilter::exact('is_approved'),
+                    AllowedFilter::exact('industry'),
+                    AllowedFilter::exact('size'),
+                ])
+                ->defaultSort('-created_at')
+                ->paginate($request->get('per_page', 15)); 
+    
             return $this->sendResponse($companies, 'Get all Companies', 200);
         } catch (Exception $e) {
-            return $this->sendError('Faild to retrieve companies', ['error' => $e->getMessage()], 500);
+            return $this->sendError('Failed to retrieve companies', ['error' => $e->getMessage()], 500);
         }
-
-
     }
     //get company by id
     public function show($id)
