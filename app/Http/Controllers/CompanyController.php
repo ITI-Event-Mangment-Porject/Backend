@@ -11,6 +11,7 @@ use App\Models\Company\Company;
 use Illuminate\Validation\ValidationException;
 use Storage;
 use Symfony\Contracts\Service\Attribute\Required;
+use App\Http\Controllers\API\BaseApiController;
 class CompanyController extends Controller
 {
     //create new company
@@ -45,6 +46,7 @@ class CompanyController extends Controller
 
             $data['is_approved'] = false;
             $company = Company::create($data);
+            
 
             return response()->json($company, 201);
 

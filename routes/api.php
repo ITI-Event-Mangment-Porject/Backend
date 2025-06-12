@@ -130,7 +130,7 @@ Route::prefix('dashboard')->group(function () {
     Route::get('/staff', [DashboardController::class, 'staffDashboard']);
 
     // admin subroutes
-    Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
+    Route::prefix('admin')->group(function () {
         Route::get('/overview', [DashboardController::class, 'adminOverview']);
         Route::get('/events', [DashboardController::class, 'adminEvents']);
         Route::get('/users', [DashboardController::class, 'adminUsers']);
@@ -141,13 +141,14 @@ Route::prefix('dashboard')->group(function () {
 });
 
 //setting controller  missing middleware of admin
-Route::middleware(['auth', 'role:admin'])->prefix('settings')->group(function () {
+Route::prefix('settings')->group(function () {
     Route::get('/', [SettingController::class, 'index']);
     Route::put('/{key}', [SettingController::class, 'update']);
     Route::get('/public', [SettingController::class, 'getPublic']);
 });
 
-Route::middleware(['auth','role:admin'])->prefix('/reports')->group(function () {
+// missing middleware
+Route::prefix('/reports')->group(function () {
     Route::get('/events', [ReportController::class, 'eventsReports']);
     Route::get('/attendance', [ReportController::class, 'attendanceReports']);
     Route::get('/feedback', [ReportController::class, 'feedbackReports']);
