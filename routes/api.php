@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
+use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
@@ -148,12 +149,16 @@ Route::prefix('job-fairs')->group(function(){
     Route::delete('/{id}', [JobFairController::class, 'destroy']);
     Route::get('/{id}/companies', [JobFairController::class, 'Companies']);
     Route::get('/{id}/statistics', [JobFairController::class, 'statistics']);
-    // Company submits participation
+
     Route::post('/{id}/participate', [JobFairParticipationController::class, 'store']);
-    // Admin views allparticipations
     Route::get('/{id}/participations', [JobFairParticipationController::class, 'index']);
-    // Admin views a specific participation
     Route::get('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
-    // Admin approves/rejects
     Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
+
+    Route::get('/{id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerParticipation']);
+    Route::get('{id}/job-profiles', [JobProfileController::class, 'jobProfilesPerJobFair']);
+    Route::post('/{id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'store']);
+    Route::get('/job-profiles/{job_profile_id}', [JobProfileController::class, 'show']);
+    Route::put('/job-profiles/{job_profile_id}', [JobProfileController::class, 'update']);
+    Route::delete('/job-profiles/{job_profile_id}', [JobProfileController::class, 'destroy']);
 });
