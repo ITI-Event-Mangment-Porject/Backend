@@ -64,7 +64,7 @@ class Kernel extends HttpKernel
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'redirect.to.portal' => \App\Http\Middleware\RedirectIfUnauthenticatedToPortal::class,
+        // 'redirect.to.portal' => \App\Http\Middleware\RedirectIfUnauthenticatedToPortal::class,
         'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
 
         
