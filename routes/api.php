@@ -11,6 +11,8 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 
 use App\Http\Controllers\Event\EventController;
+use App\Http\Controllers\Event\EventSessionController;
+use App\Http\Controllers\Event\EventStaffController;
 
 
 
@@ -70,7 +72,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Protected routes (requires authentication and role-based access)
-Route::group( [],function () {    // User profile routes
+// Route::group( [],function () {    // User profile routes
     // Route::middleware(['jwt.auth'])->get('/profile', [AuthController::class, 'profile']);
     // Route::post('/logout', [AuthController::class, 'logout']);
     // Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -81,7 +83,26 @@ Route::group( [],function () {    // User profile routes
     |--------------------------------------------------------------------------
     |
     */
-   
+    Route::prefix('events')->group(function () {
+        Route::get('/', [EventController::class, 'index']); // List all events
+        Route::post('/', [EventController::class, 'store'])->middleware('role:admin');
+        
+        // Specific routes FIRST (these need to come before the generic /{event_flexible})
+        Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
+        Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
+        Route::get('/{event_flexible}/banner', [EventController::class, 'banner']);
+        
+        /* Event Sessions */
+        Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
+        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
+        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
+        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+        
+        // Generic routes LAST
+        Route::get('/{event_flexible}', [EventController::class, 'show']);
+        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+    });
     /*
     |--------------------------------------------------------------------------
     | Example Category Routes (commented out)
@@ -101,7 +122,7 @@ Route::group( [],function () {    // User profile routes
     //     Route::patch('/{user}/role', [UserController::class, 'updateRole']); // Update role
     // });
     */
-});
+// });
 
 //companyController still need admin middleware 
 Route::prefix('companies')->group(function () {
