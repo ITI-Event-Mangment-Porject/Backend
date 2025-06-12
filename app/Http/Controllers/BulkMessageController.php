@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Notifications_and_Messaging\BulkMessage;
+use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

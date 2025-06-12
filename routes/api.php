@@ -12,7 +12,7 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\BulkMessageController;
+ use App\Http\Controllers\BulkMessageController;
 use App\Http\Controllers\FeedbackController;
 
 use App\Http\Controllers\Event\EventController;
@@ -156,7 +156,7 @@ Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 });
 
-// Bulk Messages Routes 
+// // Bulk Messages Routes 
 Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::post('/', [BulkMessageController::class, 'store']);
