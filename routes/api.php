@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\API\Users\UserController;
+use App\Http\Controllers\API\Users\TrackController;
 
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BulkMessageController;
@@ -45,6 +46,15 @@ Route::prefix('test/users')->group(function () {
     Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
     Route::put('/{id}', [UserController::class, 'update']);           // Test updating a user
     Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
+});
+
+// Test routes for Track API endpoints (no authentication required)
+Route::prefix('test/tracks')->group(function () {
+    Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
+    Route::post('/', [TrackController::class, 'store']);               // Test creating a track
+    Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
+    Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
+    Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
 });
 
 // Public routes
