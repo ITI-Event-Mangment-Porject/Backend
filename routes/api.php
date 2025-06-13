@@ -77,6 +77,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/profile', [AuthController::class, 'profile']);
     });
+});
 
     // Protected routes (requires authentication and role-based access)
     // Route::group( [],function () {    // User profile routes
@@ -166,7 +167,6 @@ Route::prefix('auth')->group(function () {
             Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
         });
     }); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
-});
 
 // Job Fair Controllers
 Route::prefix('job-fairs')->group(function () {
