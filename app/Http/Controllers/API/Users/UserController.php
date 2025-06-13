@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\API\Users;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\Auth\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
-class UserController extends Controller
+class UserController extends BaseApiController
 {
     // List all users with pagination and filters
     public function index(Request $request)
@@ -70,8 +71,8 @@ class UserController extends Controller
 
         $users = $query->paginate($perPage);
 
-        return response()->json([
-            'data' => $users->items(),
+        $data = [
+            'users' => $users->items(),
             'pagination' => [
                 'current_page' => $users->currentPage(),
                 'last_page' => $users->lastPage(),
@@ -94,14 +95,19 @@ class UserController extends Controller
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
             ]
-        ]);
+        ];
+        
+        return $this->sendResponse($data, 'Users retrieved successfully');
     }
 
     // Show a specific user
     public function show($id){
-        $user = User::with(['track'])
-            ->findOrFail($id);
-        return response()->json($user);
+        try {
+            $user = User::with(['track'])->findOrFail($id);
+            return $this->sendResponse(['user' => $user], 'User details retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->sendError('User not found', ['error' => 'User with ID ' . $id . ' not found'], 404);
+        }
     }
 
     // Create a new user
@@ -120,14 +126,16 @@ class UserController extends Controller
             'linkedin_url' => 'nullable|url',
             'github_url' => 'nullable|url',
             'portfolio_url' => 'nullable|url',
+            'profile_image' => 'nullable',
+            'cv_path' => 'nullable'
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
         }
 
         $user = User::create($validator->validated());
-        return response()->json($user, 201);
+        return $this->sendResponse(['user' => $user], 'User created successfully', 201);
     }
 
     // Update an existing user
@@ -146,19 +154,25 @@ class UserController extends Controller
             'linkedin_url' => 'nullable|url',
             'github_url' => 'nullable|url',
             'portfolio_url' => 'nullable|url',
+            'profile_image' => 'nullable',
+            'cv_path' => 'nullable'
         ]);
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
         }
 
         $user->update($validator->validated());
-        return response()->json($user);
+        return $this->sendResponse(['user' => $user], 'User updated successfully');
     }
 
     // Delete a user
     public function destroy($id){
-        $user = User::findOrFail($id);
-        $user->delete();
-        return response()->json(['message' => 'User deleted successfully']);
+        try {
+            $user = User::findOrFail($id);
+            $user->delete();
+            return $this->sendResponse([], 'User deleted successfully');
+        } catch (\Exception $e) {
+            return $this->sendError('User deletion failed', ['error' => 'User with ID ' . $id . ' not found'], 404);
+        }
     }
 }
