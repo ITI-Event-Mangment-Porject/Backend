@@ -1,26 +1,72 @@
-*.log
-.DS_Store
-.env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-/.fleet
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
-/node_modules
-/public/build
+# Laravel specific
+/vendor/
+/node_modules/
 /public/hot
 /public/storage
+/public/build
 /storage/*.key
+/storage/logs/*
 /storage/pail
-/vendor
+/bootstrap/cache/*
+.env
+.env.*
+!.env.example
+.phpunit.result.cache
 Homestead.json
 Homestead.yaml
-npm-debug.log
+
+# IDE & Editor specific
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.zed
+*.sublime-project
+*.sublime-workspace
+.phpactor.json
+
+# OS specific
+.DS_Store
 Thumbs.db
+
+# Composer
+composer.phar
+/auth.json
+
+# NPM/Yarn
+package-lock.json
+yarn.lock
+npm-debug.log
 yarn-error.log
+
+# Local development
+.php-cs-fixer.cache
+.php_cs.cache
+.phpstorm.meta.php
+_ide_helper.php
+_ide_helper_models.php
+
+# Testing
+/coverage/
+.phpunit.cache/
+
+# Application specific
+/public/css/
+/public/js/
+/public/images/
+/public/fonts/
+/public/mix-manifest.json
+
+# Database
+*.sqlite
+*.sqlite-journal
+
+# Laravel Mix
+mix-manifest.json
+
+# Laravel Telescope
+/storage/telescope/*.log
+
+# Docker
+docker-compose.override.yml
+/docker/data/
