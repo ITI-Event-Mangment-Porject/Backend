@@ -5,44 +5,47 @@ namespace App\Http\Controllers;
 use App\Exports\AttendanceReportExport;
 use App\Exports\EventsReportExport;
 use App\Exports\FeedbackReportExport;
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\Event\Event;
 use Exception;
 use Illuminate\Http\Request;
-
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
 
-
-
-class ReportController extends Controller
+class ReportController extends BaseApiController
 {
     public function eventsReports()
     {
         try {
-            // count how many one register , put feedback , make interview request , participate in job fair
-            $events = Event::withCount([
-                'registrations',
-                'feedbackResponses',
-                'interviewRequests',
-                'jobFairParticipations',
-            ])->get();
-            //dd($events);
-            return response()->json(([
-                'message' => 'get report about events',
-                'data' => $events
-            ]));
+            $events = QueryBuilder::for(Event::class)
+                ->withCount(['registrations', 'feedbackResponses', 'interviewRequests', 'jobFairParticipations'])
+                ->allowedFilters([
+                    AllowedFilter::partial('title'),
+                    AllowedFilter::scope('start_time'),
+                    AllowedFilter::scope('end_time'),
+                ])
+                ->get();
+
+            return $this->sendResponse($events, 'Event report retrieved successfully');
         } catch (Exception $e) {
             \Log::error('Error fetching event reports: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Error fetching event reports.'], 500);
+            return $this->sendError('Failed to fetch event report', ['error' => $e->getMessage()], 500);
         }
     }
+
     public function attendanceReports()
     {
         try {
-            //load registrations and users for all events
-            $events = Event::with(['registrations.user'])->get();
+            $events = QueryBuilder::for(Event::class)
+                ->with(['registrations.user'])
+                ->allowedFilters([
+                    AllowedFilter::partial('title'),
+                ])
+                ->get();
 
             if ($events->isEmpty()) {
-                return response()->json(['message' => 'There are no events found.'], 404);
+                return $this->sendError('There are no events found.', [], 404);
             }
 
             $data = $events->map(function ($event) {
@@ -55,37 +58,50 @@ class ReportController extends Controller
                     'total_registration' => $validRegistrations->count(),
                     'attendees' => $validRegistrations->map(function ($r) {
                         return [
-                            'name' => $r->user->first_name,
+                            'name' => $r->user->first_name . " " . $r->user->last_name,
                             'email' => $r->user->email,
+                            'phone' => $r->user->phone
                         ];
                     })->values(),
                 ];
             });
 
-            return response()->json([
-                'message' => 'Info about all attendance',
-                'data' => $data,
-            ], 200);
+            return $this->sendResponse($data, 'Attendance report retrieved successfully');
 
         } catch (Exception $e) {
             \Log::error('Error fetching attendance reports: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage(), 'message' => 'Error fetching attendance.'], 500);
+            return $this->sendError('Failed to fetch attendance report', ['error' => $e->getMessage()], 500);
         }
     }
-
 
     public function feedbackReports()
     {
         try {
-            $events = Event::with('feedbackResponses.user')->get();
+            $events = QueryBuilder::for(Event::class)
+                ->with(['feedbackResponses.user', 'feedbackForms']) 
+                ->allowedFilters([
+                    AllowedFilter::partial('title'),
+                    AllowedFilter::partial('start_time'),
+                    AllowedFilter::partial('end_time'),
+                ])
+                ->get();
             if ($events->isEmpty()) {
-                return response()->json(['message' => 'There is no feedbacks in any event'], 404);
+                return $this->sendError('There is no feedback available for any event.', [], 404);
             }
+
             $data = $events->map(function ($event) {
                 $responses = $event->feedbackResponses;
-                $form = $event->feedbackForms()->first(); //each event have one form
-                $questions = $form ? ($form->form_config['questions'] ?? []) : []; //get feedback form question
+                $form = $event->feedbackForms()->first();
 
+                // Extract questions from form config
+                $questions = [];
+                if ($form && $form->form_config) {
+                    // If form_config is JSON string, decode it
+                    $formConfig = is_string($form->form_config)
+                        ? json_decode($form->form_config, true)
+                        : $form->form_config;
+                    $questions = $formConfig['fields'] ?? [];
+                }
 
                 if ($responses->isEmpty()) {
                     return [
@@ -93,25 +109,42 @@ class ReportController extends Controller
                         'feedback_count' => 0,
                         'average_rating' => 0,
                         'feedbacks' => []
-
                     ];
                 }
+
                 return [
                     'event' => $event->title,
                     'feedback_count' => $responses->count(),
                     'average_rating' => round($responses->avg('overall_rating'), 2),
                     'feedbacks' => $responses->map(function ($response) use ($questions) {
-                        $answers = [];
-                        foreach ($questions as $index => $question) {
-                            $key = 'q' . ($index + 1);
-                            $answers[] = [
-                                'question' => $question,
-                                'answer' => $response->responses[$key] ?? null,
+                        // Map questions to answers
+                        $answers = collect($questions)->map(function ($field) use ($response) {
+                            $label = $field['label'] ?? 'Unnamed Question';
+
+                            // Convert label to snake_case to match response keys
+                            $key = \Str::snake(strtolower($label));
+
+                            // Get the answer from response data
+                            $answer = '[No Answer]';
+                            if (isset($response->responses) && is_array($response->responses)) {
+                                $answer = $response->responses[$key] ?? '[No Answer]';
+                            } elseif (isset($response->responses) && is_string($response->responses)) {
+                                // If responses is json string, decode it
+                                $decodedResponses = json_decode($response->responses, true);
+                                $answer = $decodedResponses[$key] ?? '[No Answer]';
+                            }
+                            return [
+                                'question' => $label,
+                                'answer' => $answer,
                             ];
-                        }
+                        })->toArray();
+
                         return [
-                            'user' => $response->user?($response->user->first_name." ".$response->user->last_name): 'Unknown',
+                            'user' => $response->user
+                                ? ($response->user->first_name . " " . $response->user->last_name)
+                                : 'Unknown',
                             'email' => $response->user ? $response->user->email : 'N/A',
+                            'phone'=>$response->user->phone,
                             'rating' => $response->overall_rating,
                             'answers' => $answers,
                             'submitted_at' => $response->submitted_at->format('Y-m-d H:i:s'),
@@ -119,13 +152,15 @@ class ReportController extends Controller
                     })->values()
                 ];
             });
-            return response()->json(['message' => 'reports about feedbacks', 'data' => $data], 200);
+
+            return $this->sendResponse($data, 'Feedback report retrieved successfully');
+
         } catch (Exception $e) {
             \Log::error('Error fetching feedback reports: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage(), 'message' => 'Error fetching feedback.'], 500);
+            return $this->sendError('Failed to fetch feedback report', ['error' => $e->getMessage()], 500);
         }
-
     }
+
     public function exportReports(Request $request)
     {
         $type = $request->query('type', 'xlsx');
@@ -147,17 +182,17 @@ class ReportController extends Controller
                     $filename = 'events_report';
                     break;
             }
-            if ($type === 'json') {
-                return response()->json(['message' => 'export data in json format', 'data' => $export->collection()], 200);
 
+            if ($type === 'json') {
+                return $this->sendResponse($export->collection(), 'Exported data in JSON format');
             }
+
             $extension = $type === 'csv' ? 'csv' : 'xlsx';
             return Excel::download($export, "{$filename}.{$extension}");
 
-        }catch (Exception $e) {
+        } catch (Exception $e) {
             \Log::error('Error exporting reports: ' . $e->getMessage());
-            return response()->json(['message' => 'Error exporting report', 'error' => $e->getMessage()], 500);
+            return $this->sendError('Failed to export report', ['error' => $e->getMessage()], 500);
         }
     }
 }
-

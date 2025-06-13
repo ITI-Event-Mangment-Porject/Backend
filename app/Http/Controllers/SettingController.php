@@ -2,77 +2,73 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\System_Config\SystemSetting;
-use Dotenv\Exception\ValidationException;
-use Exception;
+use App\Http\Controllers\API\BaseApiController;
+use App\Http\Requests\StoreSettingRequest;
+use App\Models\SystemConfig\SystemSetting;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Exception;
+use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
 
-class SettingController extends Controller
+class SettingController extends BaseApiController
 {
     public function index()
     {
         try {
-            $settings = SystemSetting::all();
-            return response()->json(['message' => 'all settings', 'data' => $settings], 200);
+            $settings = QueryBuilder::for(SystemSetting::class)
+                ->allowedFilters([
+                    AllowedFilter::partial('setting_key'),
+                    AllowedFilter::exact('setting_type'),
+                    AllowedFilter::exact('is_public'),
+                ])
+                ->get();
+            return $this->sendResponse($settings, 'All system settings retrieved successfully.');
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve system settings.'
-            ], 500);
+            \Log::error('Settings index failed: ' . $e->getMessage());
+            return $this->sendError('Failed to retrieve system settings.', [], 500);
         }
-
     }
-    public function update(Request $request, $key)
+
+    public function update(StoreSettingRequest $request, $key)
     {
         try {
-            $vaildated = $request->validate([
-                'setting_value' => 'required',
-                'setting_type' => 'nullable|in:string,boolean,integer,json',
-            ]);
-            // remove auth when you test cause i didn't handle middleware and auth yet
-            if (!auth()->check()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
-            }
+            $validated =$request->validated();
+            // Temporarily disable auth check if not yet handled
+            // if (!auth()->check()) {
+            //     return $this->sendError('Unauthorized', [], 403);
+            // }
+
             $setting = SystemSetting::set(
                 $key,
-                $vaildated['setting_value'],
-                $vaildated['setting_type']
+                $validated['setting_value'],
+                $validated['setting_type']
             );
-            return response()->json([
-                'message' => 'setting Updated successfully',
-                'data' => $setting
-            ]);
+
+            return $this->sendResponse($setting, 'Setting updated successfully.');
+
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                 ], 422);
+            return $this->sendError('Validation failed.', $e->errors(), 422);
         } catch (Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-                'message' => 'Failed to update setting.'
-            ], 500);
+            \Log::error('Setting update failed: ' . $e->getMessage());
+            return $this->sendError('Failed to update setting.', ['error' => $e->getMessage()], 500);
         }
     }
+
     public function getPublic()
     {
         try {
-            $settings = SystemSetting::where('is_public', true)->get();
-
-            return response()->json([
-                'message' => 'public settings',
-                'data' => $settings
-            ], 200);
-
+            $settings = QueryBuilder::for(SystemSetting::class)
+            ->allowedFilters([
+                AllowedFilter::partial('setting_key'),
+                AllowedFilter::exact('setting_type'),
+            ])
+            ->where('is_public', true)
+            ->get();
+            return $this->sendResponse($settings, 'Public system settings retrieved successfully.');
         } catch (Exception $e) {
-            return response()->json([
-                'error' => $e->getMessage(),
-                'message' => 'Failed to retrieve public settings.'
-            ], 500);
+            \Log::error('Get public settings failed: ' . $e->getMessage());
+            return $this->sendError('Failed to retrieve public settings.', ['error' => $e->getMessage()], 500);
         }
-
     }
 }

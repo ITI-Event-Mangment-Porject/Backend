@@ -116,10 +116,11 @@ Route::prefix('companies')->group(function () {
 
 // media controller 
 Route::prefix('media')->group(function () {
+    Route::get('/',[MediaController::class,'index']);
     Route::post('/upload', [MediaController::class, 'upload']);
-    Route::get('/{id}', [MediaController::class, 'download']);
+    Route::get('/{id}/download', [MediaController::class, 'download']);
     Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
-    Route::middleware('role:admin')->delete('/{id}', [MediaController::class, 'destroy']); //by admin
+    Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
 });
 
 // dashboard controller
@@ -144,7 +145,7 @@ Route::prefix('dashboard')->group(function () {
 Route::prefix('settings')->group(function () {
     Route::get('/', [SettingController::class, 'index']);
     Route::put('/{key}', [SettingController::class, 'update']);
-    Route::get('/public', [SettingController::class, 'getPublic']);
+    Route::get('/public', [SettingController::class, 'getPublic']); // all public settings
 });
 
 // missing middleware

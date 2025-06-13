@@ -55,13 +55,7 @@ class CompanyController extends BaseApiController
     {
         try {
             $company = Company::findOrFail($id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Company retrieved successfully',
-                'data' => $company
-            ], 200);
-
+            return $this->sendResponse($company,'company retrieved successfully',200);
         } catch (ModelNotFoundException $e) {
             return $this->sendError('company not found', ['error' => $e->getMessage()], 404);
 
