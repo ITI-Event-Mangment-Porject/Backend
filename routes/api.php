@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\API\Events\InterviewRequestController;
+use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
 use App\Http\Controllers\API\Events\JobProfileController;
@@ -140,25 +142,37 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
 
 });
 
- // Job Fair Controllers
+ // Job Fair Routes No Middleware Yet
 Route::prefix('job-fairs')->group(function(){
     Route::get('/', [JobFairController::class, 'index']);
-    Route::get('/{id}', [JobFairController::class, 'show']);
+    Route::get('/{job_fair_id}', [JobFairController::class, 'show']);
     Route::post('/', [JobFairController::class, 'store']);
-    Route::put('/{id}', [JobFairController::class, 'update']);
-    Route::delete('/{id}', [JobFairController::class, 'destroy']);
-    Route::get('/{id}/companies', [JobFairController::class, 'Companies']);
-    Route::get('/{id}/statistics', [JobFairController::class, 'statistics']);
+    Route::put('/{job_fair_id}', [JobFairController::class, 'update']);
+    Route::delete('/{job_fair_id}', [JobFairController::class, 'destroy']);
+    Route::get('/{job_fair_id}/companies', [JobFairController::class, 'Companies']);
+    Route::get('/{job_fair_id}/statistics', [JobFairController::class, 'statistics']);
 
-    Route::post('/{id}/participate', [JobFairParticipationController::class, 'store']);
-    Route::get('/{id}/participations', [JobFairParticipationController::class, 'index']);
-    Route::get('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
-    Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
+    Route::post('/{job_fair_id}/participate', [JobFairParticipationController::class, 'store']);
+    Route::get('/{job_fair_id}/participations', [JobFairParticipationController::class, 'index']);
+    Route::get('/{job_fair_id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
+    Route::put('/{job_fair_id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
 
-    Route::get('/{id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerParticipation']);
-    Route::get('{id}/job-profiles', [JobProfileController::class, 'jobProfilesPerJobFair']);
-    Route::post('/{id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'store']);
+    Route::get('/{job_fair_id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerParticipation']);
+    Route::get('{job_fair_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerJobFair']);
+    Route::post('/{job_fair_id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'store']);
     Route::get('/job-profiles/{job_profile_id}', [JobProfileController::class, 'show']);
     Route::put('/job-profiles/{job_profile_id}', [JobProfileController::class, 'update']);
     Route::delete('/job-profiles/{job_profile_id}', [JobProfileController::class, 'destroy']);
+
+    Route::get('/{job_fair_id}/interview-slots', [InterviewSlotController::class, 'jobFairSlots']);
+    Route::get('/{job_fair_id}/participations/{participation_id}/interview-slots', [InterviewSlotController::class, 'participationSlots']);
+    Route::post('/{job_fair_id}/participations/{participation_id}/interview-slots', [InterviewSlotController::class, 'store']);
+    Route::get('/interview-slots/{slot_id}', [InterviewSlotController::class, 'show']);
+    Route::put('/interview-slots/{slot_id}', [InterviewSlotController::class, 'update']);
+    Route::delete('/interview-slots/{slot_id}', [InterviewSlotController::class, 'destroy']);
+
+    Route::post('{job_fair_id}/interview-requests', [InterviewRequestController::class, 'store']);
+    Route::get('{job_fair_id}/interview-requests/my', [InterviewRequestController::class, 'myRequests']);
+    Route::get('{job_fair_id}/interview-requests/company', [InterviewRequestController::class, 'companyRequests']);
+    Route::put('interview-requests/{request_id}/review', [InterviewRequestController::class, 'review']);
 });
