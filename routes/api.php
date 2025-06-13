@@ -10,6 +10,7 @@ use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\API\Users\UserController;
 
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\BulkMessageController;
@@ -35,6 +36,15 @@ use App\Http\Controllers\Event\EventStaffController;
 // This route is for testing the API connection
 Route::get('/test-connection', function () {
     return response()->json(['status' => 'working']);
+});
+
+// Test routes for User API endpoints (no authentication required)
+Route::prefix('test/users')->group(function () {
+    Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
+    Route::post('/', [UserController::class, 'store']);               // Test creating a user
+    Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
+    Route::put('/{id}', [UserController::class, 'update']);           // Test updating a user
+    Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
 });
 
 // Public routes
@@ -127,7 +137,6 @@ Route::prefix('auth')->group(function () {
     //     Route::get('/{user}', [UserController::class, 'show']);     // Get user details
     //     Route::put('/{user}', [UserController::class, 'update']);   // Update user
     //     Route::delete('/{user}', [UserController::class, 'destroy']); // Delete user
-    //     Route::patch('/{user}/role', [UserController::class, 'updateRole']); // Update role
     // });
     */
     // });
