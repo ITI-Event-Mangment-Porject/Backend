@@ -4,11 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Event\Event;
 use App\Models\Company\Company;
-use App\Models\Job_Fair\JobFairParticipation;
-use App\Models\Job_Fair\JobProfile;
-use App\Models\Job_Fair\InterviewSlot;
-use App\Models\Registration_and_interview\InterviewRequest;
-use App\Models\Registration_and_interview\InterviewQueue;
+use App\Models\JobFair\JobFairParticipation;
+use App\Models\JobFair\JobProfile;
+use App\Models\JobFair\InterviewSlot;
+use App\Models\RegistrationAndInterview\InterviewRequest;
+use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\Auth\User;
 use App\Models\Auth\Track;
 use Illuminate\Database\Seeder;

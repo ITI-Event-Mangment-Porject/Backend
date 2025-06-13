@@ -6,12 +6,12 @@ use App\Models\Auth\User;
 use App\Models\Event\EventSession;
 use App\Models\Event\EventStaffAssignment;
 use App\Models\Event\EventVisibilityTrack;
-use App\Models\Feedback_and_Analytics\AiInsight;
-use App\Models\Feedback_and_Analytics\FeedbackForm;
-use App\Models\Feedback_and_Analytics\FeedbackResponse;
-use App\Models\Job_Fair\JobFairParticipation;
-use App\Models\Registration_and_interview\EventRegistration;
-use App\Models\Registration_and_interview\InterviewRequest;
+use App\Models\FeedbackAndAnalytics\AiInsight;
+use App\Models\FeedbackAndAnalytics\FeedbackForm;
+use App\Models\FeedbackAndAnalytics\FeedbackResponse;
+use App\Models\JobFair\JobFairParticipation;
+use App\Models\RegistrationAndInterview\EventRegistration;
+use App\Models\RegistrationAndInterview\InterviewRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,10 +20,24 @@ class Event extends Model
     //
     use HasFactory;
     protected $fillable = [
-        'title', 'slug', 'description', 'type', 'status', 'location',
-        'start_date', 'end_date', 'start_time', 'end_time', 'banner_image',
-        'registration_deadline', 'visibility_type', 'visibility_config',
-        'slido_qr_code', 'slido_embed_url', 'created_by', 'archived_at'
+        'title',
+        'slug',
+        'description',
+        'type',
+        'status',
+        'location',
+        'start_date',
+        'end_date',
+        'start_time',
+        'end_time',
+        'banner_image',
+        'registration_deadline',
+        'visibility_type',
+        'visibility_config',
+        'slido_qr_code',
+        'slido_embed_url',
+        'created_by',
+        'archived_at'
     ];
 
     protected $casts = [
@@ -99,5 +113,13 @@ class Event extends Model
     public function isActive()
     {
         return in_array($this->status, ['published', 'ongoing']);
+    }
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['published', 'ongoing'])
+                     ->where(function ($query) {
+                         $query->whereNull('archived_at')
+                               ->orWhere('archived_at', '>', now());
+                     });
     }
 }

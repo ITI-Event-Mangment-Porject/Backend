@@ -1,12 +1,20 @@
 <?php
 
+use App\Http\Controllers\API\Events\JobFairController;
+use App\Http\Controllers\API\Events\JobFairParticipationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\API\Users\UserController;
+
+use App\Http\Controllers\Event\EventController;
+use App\Http\Controllers\Event\EventSessionController;
+use App\Http\Controllers\Event\EventStaffController;
+
 
 
 /*
@@ -66,28 +74,46 @@ Route::group([], function () {
 });
 
 // Protected routes (requires authentication)
-Route::group(['middleware' => ['auth:api']], function () {    // User profile routes
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
     Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']);
+});
+
+// Protected routes (requires authentication and role-based access)
+// Route::group( [],function () {    // User profile routes
+    // Route::middleware(['jwt.auth'])->get('/profile', [AuthController::class, 'profile']);
+    // Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::post('/refresh', [AuthController::class, 'refresh']);
 
     /*
     |--------------------------------------------------------------------------
     | Example Event Routes (commented out)
     |--------------------------------------------------------------------------
     |
-    // Route::prefix('events')->group(function () {
-    //     Route::get('/', [EventController::class, 'index']);     // Get all events
-    //     Route::post('/', [EventController::class, 'store']);    // Create event
-    //     Route::get('/{event}', [EventController::class, 'show']);    // Get single event
-    //     Route::put('/{event}', [EventController::class, 'update']);  // Update event
-    //     Route::delete('/{event}', [EventController::class, 'destroy']); // Delete event
-    //     
-    //     // Event registration
-    //     Route::post('/{event}/register', [EventController::class, 'register']);
-    //     Route::delete('/{event}/cancel', [EventController::class, 'cancelRegistration']);
-    // });
-
+    */
+    Route::prefix('events')->group(function () {
+        Route::get('/', [EventController::class, 'index']); // List all events
+        Route::post('/', [EventController::class, 'store'])->middleware('role:admin');
+        
+        // Specific routes FIRST (these need to come before the generic /{event_flexible})
+        Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
+        Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
+        Route::get('/{event_flexible}/banner', [EventController::class, 'banner']);
+        
+        /* Event Sessions */
+        Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
+        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
+        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
+        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+        
+        // Generic routes LAST
+        Route::get('/{event_flexible}', [EventController::class, 'show']);
+        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+    });
+    /*
     |--------------------------------------------------------------------------
     | Example Category Routes (commented out)
     |--------------------------------------------------------------------------
@@ -105,7 +131,7 @@ Route::group(['middleware' => ['auth:api']], function () {    // User profile ro
     //     Route::delete('/{user}', [UserController::class, 'destroy']); // Delete user
     // });
     */
-});
+// });
 
 //companyController still need admin middleware 
 Route::prefix('companies')->group(function () {
@@ -143,4 +169,23 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
     });
 
+});
+
+ // Job Fair Controllers
+Route::prefix('job-fairs')->group(function(){
+    Route::get('/', [JobFairController::class, 'index']);
+    Route::get('/{id}', [JobFairController::class, 'show']);
+    Route::post('/', [JobFairController::class, 'store']);
+    Route::put('/{id}', [JobFairController::class, 'update']);
+    Route::delete('/{id}', [JobFairController::class, 'destroy']);
+    Route::get('/{id}/companies', [JobFairController::class, 'Companies']);
+    Route::get('/{id}/statistics', [JobFairController::class, 'statistics']);
+    // Company submits participation
+    Route::post('/{id}/participate', [JobFairParticipationController::class, 'store']);
+    // Admin views allparticipations
+    Route::get('/{id}/participations', [JobFairParticipationController::class, 'index']);
+    // Admin views a specific participation
+    Route::get('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
+    // Admin approves/rejects
+    Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
 });
