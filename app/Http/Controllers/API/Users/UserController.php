@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\API\Users;
 
 use App\Http\Controllers\API\BaseApiController;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -111,58 +113,91 @@ class UserController extends BaseApiController
     }
 
     // Create a new user
-    public function store(Request $request){
-        $validator = Validator::make($request->all(), [
-            'portal_user_id' => 'nullable|integer',
-            'email' => 'required|email|unique:users',
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'phone' => 'nullable|string',
-            'track_id' => 'nullable|exists:tracks,id',
-            'intake_year' => 'nullable|integer',
-            'graduation_year' => 'nullable|integer',
-            'is_active' => 'boolean',
-            'bio' => 'nullable|string',
-            'linkedin_url' => 'nullable|url',
-            'github_url' => 'nullable|url',
-            'portfolio_url' => 'nullable|url',
-            'profile_image' => 'nullable',
-            'cv_path' => 'nullable'
-        ]);
-
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
-        }
-
-        $user = User::create($validator->validated());
+    public function store(StoreUserRequest $request){
+        $user = User::create($request->validated());
         return $this->sendResponse(['user' => $user], 'User created successfully', 201);
     }
 
     // Update an existing user
     public function update(Request $request, $id){
-        $user = User::findOrFail($id);
-         $validator = Validator::make($request->all(), [
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'first_name' => 'sometimes|string|max:255',
-            'last_name' => 'sometimes|string|max:255',
-            'phone' => 'nullable|string',
-            'track_id' => 'nullable|exists:tracks,id',
-            'intake_year' => 'nullable|integer',
-            'graduation_year' => 'nullable|integer',
-            'is_active' => 'boolean',
-            'bio' => 'nullable|string',
-            'linkedin_url' => 'nullable|url',
-            'github_url' => 'nullable|url',
-            'portfolio_url' => 'nullable|url',
-            'profile_image' => 'nullable',
-            'cv_path' => 'nullable'
-        ]);
-        if ($validator->fails()) {
-            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
+        try {
+            $user = User::findOrFail($id);
+            
+            // Create and configure the UpdateUserRequest instance
+            $updateRequest = new UpdateUserRequest();
+            $updateRequest->setUserModel($user);
+            
+            // Validate the request using rules from UpdateUserRequest
+            $rules = $updateRequest->rules();
+            $messages = $updateRequest->messages();
+            
+            // Debug rules
+            if ($request->has('debug')) {
+                return $this->sendResponse([
+                    'rules' => $rules,
+                    'messages' => $messages,
+                    'request_data' => $request->all()
+                ], 'Debug information');
+            }
+            
+            $validator = validator()->make($request->all(), $rules, $messages);
+            
+            if ($validator->fails()) {
+                return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
+            }
+            
+            // Get validated data - this is the likely issue
+            $validatedData = [];
+            
+            // Try alternative methods to get validated data
+            try {
+                // Method 1: Using validate method
+                $validatedData = $validator->validate();
+            } catch (\Exception $ve) {
+                try {
+                    // Method 2: Using validated method
+                    $validatedData = $validator->validated();
+                } catch (\Exception $ve2) {
+                    // Method 3: Manually extract valid data
+                    foreach ($rules as $field => $rule) {
+                        if ($request->has($field)) {
+                            $validatedData[$field] = $request->input($field);
+                        }
+                    }
+                }
+            }
+            
+            // Debugging - log validated data
+            // \Log::info('Validated data for user update:', $validatedData);
+            
+            // Check if there's actually any data to update
+            if (empty($validatedData)) {
+                return $this->sendError('No data to update', ['error' => 'No valid data was provided for update'], 400);
+            }
+            
+            // Update the user with validated data
+            $user->fill($validatedData);
+            $changes = $user->getDirty();
+            
+            if (empty($changes)) {
+                return $this->sendResponse([
+                    'user' => $user,
+                    'message' => 'No changes detected in user data',
+                    'validated_data' => $validatedData
+                ], 'No changes to update');
+            }
+            
+            $user->save();
+            
+            // Refresh the user model to get the updated data
+            $user->refresh();
+            
+            return $this->sendResponse(['user' => $user], 'User updated successfully');
+        } catch (\Exception $e) {
+            // Log the exception for debugging
+            // \Log::error('Error updating user: ' . $e->getMessage(), ['exception' => $e]);
+            return $this->sendError('User update failed', ['error' => $e->getMessage()], 404);
         }
-
-        $user->update($validator->validated());
-        return $this->sendResponse(['user' => $user], 'User updated successfully');
     }
 
     // Delete a user
