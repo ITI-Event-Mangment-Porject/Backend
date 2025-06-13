@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
+
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Http\Request;
@@ -9,6 +10,10 @@ use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
+
+use App\Http\Controllers\NotificationController;
+ use App\Http\Controllers\BulkMessageController;
+use App\Http\Controllers\FeedbackController;
 
 use App\Http\Controllers\Event\EventController;
 use App\Http\Controllers\Event\EventSessionController;
@@ -64,6 +69,8 @@ Route::group([], function () {
 });
 
 // Protected routes (requires authentication)
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
     Route::post('/refresh', [AuthController::class, 'refresh']);
@@ -160,7 +167,21 @@ Route::middleware(['auth'])->prefix('dashboard')->group(function () {
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
     });
 
+}); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
+
+
+
+
+
+
+
+
+
+
 });
+
+ 
+
 
  // Job Fair Controllers
 Route::prefix('job-fairs')->group(function(){
@@ -180,3 +201,43 @@ Route::prefix('job-fairs')->group(function(){
     // Admin approves/rejects
     Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
 });
+
+
+// Feedback Routes
+Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
+
+    // Get feedback forms for an event (all users)
+    Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
+    // Create feedback form (admin only)
+    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
+    // Submit feedback response (students)
+    Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
+    // Get feedback responses (admin only)
+    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
+    // Toggle form status (admin only)
+    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
+});
+
+
+// Notifications Routes 
+Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+});
+
+
+
+// Bulk Messages Routes 
+Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/', [BulkMessageController::class, 'index']);
+    Route::post('/', [BulkMessageController::class, 'store']);
+    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
+    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+});
+
+
+
+
+
