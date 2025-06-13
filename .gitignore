@@ -4,9 +4,27 @@
 /public/hot
 /public/storage
 /public/build
+
+# Storage directory
 /storage/*.key
 /storage/logs/*
 /storage/pail
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/debugbar/*
+/storage/app/public/*
+/storage/app/private/*
+/storage/app/*.key
+
+# Keep storage structure
+!/storage/framework/cache/.gitkeep
+!/storage/framework/sessions/.gitkeep
+!/storage/framework/views/.gitkeep
+!/storage/framework/testing/.gitkeep
+!/storage/app/public/.gitkeep
+!/storage/app/private/.gitkeep
 /bootstrap/cache/*
 .env
 .env.*
