@@ -43,8 +43,8 @@ class Event extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        'start_time' => 'string',
+        'end_time' => 'string',
         'registration_deadline' => 'datetime',
         'visibility_config' => 'array',
         'archived_at' => 'datetime',
@@ -120,12 +120,12 @@ class Event extends Model
     // Time formatting helpers
     public function getStartTimeOnlyAttribute()
     {
-        return $this->start_time ? $this->start_time->format('H:i:s') : null;
+        return $this->start_time; // Already a time string like "14:30:00"
     }
 
     public function getEndTimeOnlyAttribute()
     {
-        return $this->end_time ? $this->end_time->format('H:i:s') : null;
+        return $this->end_time; // Already a time string like "16:30:00"
     }
 
     public function scopeActive($query)

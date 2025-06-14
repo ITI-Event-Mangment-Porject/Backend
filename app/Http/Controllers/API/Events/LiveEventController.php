@@ -31,14 +31,11 @@ class LiveEventController extends BaseApiController
                 ->where('event_id', $event->id)
                 ->where('status', 'attended') // only users who attended
                 ->count();            // Return live event status based on event status
-            return $this->sendResponse([
-                'isLive' => $event->status === 'ongoing',
+            return $this->sendResponse([                'isLive' => $event->status === 'ongoing',
                 'status' => $event->status,
                 'eventName' => $event->title,
-                'startTime' => $event->start_time,
-                'endTime' => $event->end_time,
-                'startTimeFormatted' => $event->start_time ? $event->start_time->format('H:i:s') : null,
-                'endTimeFormatted' => $event->end_time ? $event->end_time->format('H:i:s') : null,
+                'startTime' => $event->start_time, // Now just time string like "14:30:00"
+                'endTime' => $event->end_time,     // Now just time string like "16:30:00"
                 'attendeesCount' => $attendeesCount,
                 'eventDetails' => [
                     'id' => $event->id,
@@ -81,17 +78,13 @@ class LiveEventController extends BaseApiController
             $event->status = 'ongoing';            // Get validated data from the request
             $validatedData = $request->validated();
 
-            // Update the start_time to current datetime (only if requested)
-            if (isset($validatedData['update_start_time']) && $validatedData['update_start_time']) {
-                $event->start_time = Carbon::now();
-                Log::info('Setting start_time to: ' . Carbon::now());
-            }
+            // Always update the start_time to current time (time only)
+            $event->start_time = Carbon::now()->format('H:i:s');
+            Log::info('Setting start_time to: ' . Carbon::now()->format('H:i:s'));
 
             $result = $event->save();
             Log::info('Event save result: ' . ($result ? 'success' : 'failed'));
-            if (isset($validatedData['update_start_time']) && $validatedData['update_start_time']) {
-                Log::info('Event start_time after save: ' . $event->start_time);
-            }// Get all attendees for this event (only those who attended)
+            Log::info('Event start_time after save: ' . $event->start_time);// Get all attendees for this event (only those who attended)
             $attendees = DB::table('event_registrations')
                 ->join('users', 'event_registrations.user_id', '=', 'users.id')
                 ->where('event_registrations.event_id', $event->id)
@@ -143,17 +136,13 @@ class LiveEventController extends BaseApiController
             $event->status = 'completed';            // Get validated data from the request
             $validatedData = $request->validated();
 
-            // Update the end_time to current datetime (only if requested)
-            if (isset($validatedData['update_end_time']) && $validatedData['update_end_time']) {
-                $event->end_time = Carbon::now();
-                Log::info('Setting end_time to: ' . Carbon::now());
-            }
+            // Always update the end_time to current time (time only)
+            $event->end_time = Carbon::now()->format('H:i:s');
+            Log::info('Setting end_time to: ' . Carbon::now()->format('H:i:s'));
 
             $result = $event->save();
             Log::info('Event save result: ' . ($result ? 'success' : 'failed'));
-            if (isset($validatedData['update_end_time']) && $validatedData['update_end_time']) {
-                Log::info('Event end_time after save: ' . $event->end_time);
-            }// Get all attendees who attended this event
+            Log::info('Event end_time after save: ' . $event->end_time);// Get all attendees who attended this event
             $attendees = DB::table('event_registrations')
                 ->join('users', 'event_registrations.user_id', '=', 'users.id')
                 ->where('event_registrations.event_id', $event->id)
