@@ -43,6 +43,8 @@ class Event extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
         'registration_deadline' => 'datetime',
         'visibility_config' => 'array',
         'archived_at' => 'datetime',
@@ -114,6 +116,18 @@ class Event extends Model
     {
         return in_array($this->status, ['published', 'ongoing']);
     }
+
+    // Time formatting helpers
+    public function getStartTimeOnlyAttribute()
+    {
+        return $this->start_time ? $this->start_time->format('H:i:s') : null;
+    }
+
+    public function getEndTimeOnlyAttribute()
+    {
+        return $this->end_time ? $this->end_time->format('H:i:s') : null;
+    }
+
     public function scopeActive($query)
     {
         return $query->whereIn('status', ['published', 'ongoing'])

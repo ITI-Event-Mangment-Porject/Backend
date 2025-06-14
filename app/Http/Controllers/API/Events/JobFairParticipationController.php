@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Company\Company;
 use App\Models\Event\Event;
 use App\Models\JobFair\JobFairParticipation;
-use DB;
+// use DB;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class JobFairParticipationController extends Controller
