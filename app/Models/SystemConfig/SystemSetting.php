@@ -13,6 +13,7 @@ class SystemSetting extends Model
     //
     use HasFactory;
     public $timestamps=false;
+
     protected $fillable = [
         'setting_key', 'setting_value', 'setting_type',
         'description', 'is_public', 'updated_by'

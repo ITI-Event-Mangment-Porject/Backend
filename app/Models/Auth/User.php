@@ -12,10 +12,12 @@ use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\RegistrationAndInterview\InterviewRequest;
-use App\Models\RegistrationAndInterview\InterviewQueue;
-use App\Models\RegistrationAndInterview\EventRegistration;
-use Spatie\Permission\Models\Role;
+
+
+use app\Models\RegistrationAndInterview\InterviewRequest;
+use app\Models\RegistrationAndInterview\InterviewQueue;
+use app\Models\RegistrationAndInterview\EventRegistration;
+use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 class User extends Authenticatable implements JWTSubject
@@ -86,15 +88,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->belongsTo(Track::class);
     }
 
-    /**
-     * User roles relationship
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot(['assigned_by', 'assigned_at', 'is_active'])
-                    ->wherePivot('is_active', true);
-    }
     public function eventRegistrations()
     {
         return $this->hasMany(EventRegistration::class);
