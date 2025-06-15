@@ -37,22 +37,37 @@ class JobFairParticipationController extends Controller
                 ['contact_email' => $companyData['contact_email']],
                 $companyData
             );
-            // Create participation record
+
+            // Prevent duplicate participation
+            $existing = JobFairParticipation::where('event_id', $eventId)
+                ->where('company_id', $company->id)
+                ->first();
+
+            if ($existing) {
+                return response()->json([
+                    'message' => 'This company has already submitted participation for this job fair.',
+                    'existing_participation_id' => $existing->id
+                ], 409);
+            }
+
+            // Create participation
             $participation = JobFairParticipation::create([
                 'event_id' => $eventId,
                 'company_id' => $company->id,
                 'status' => 'pending',
                 'special_requirements' => $request->input('special_requirements'),
-                'submitted_by' => 3, //remember to replace with actual user ID after authentication is implemented
+                'submitted_by' => 3, // Replace later with authenticated user
                 'submitted_at' => now(),
                 'need_branding' => $request->input('need_branding', false),
             ]);
+
             return response()->json([
                 'message' => 'Participation submitted successfully.',
                 'participation' => $participation,
             ], 201);
         });
     }
+
 
     //Admin approves or rejects participation.
     public function review(Request $request, $participationId)
