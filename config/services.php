@@ -34,5 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'portal' => [
+    'login_url' => env('PORTAL_API_URL', 'https://portal.example.com/login'),
+    ]
 
 ];

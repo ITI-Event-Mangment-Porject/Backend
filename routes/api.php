@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Events\InterviewRequestController;
 use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
+
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
@@ -12,6 +13,17 @@ use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\API\Users\UserController;
+use App\Http\Controllers\API\Users\TrackController;
+
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\BulkMessageController;
+use App\Http\Controllers\FeedbackController;
+
+use App\Http\Controllers\Event\EventController;
+use App\Http\Controllers\Event\EventSessionController;
+use App\Http\Controllers\Event\EventStaffController;
+
 
 
 /*
@@ -28,6 +40,24 @@ use App\Http\Controllers\CompanyController;
 // This route is for testing the API connection
 Route::get('/test-connection', function () {
     return response()->json(['status' => 'working']);
+});
+
+// Test routes for User API endpoints (no authentication required)
+Route::prefix('test/users')->group(function () {
+    Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
+    Route::post('/', [UserController::class, 'store']);               // Test creating a user
+    Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
+    Route::put('/{id}', [UserController::class, 'update']);           // Test updating a user
+    Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
+});
+
+// Test routes for Track API endpoints (no authentication required)
+Route::prefix('test/tracks')->group(function () {
+    Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
+    Route::post('/', [TrackController::class, 'store']);               // Test creating a track
+    Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
+    Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
+    Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
 });
 
 // Public routes
@@ -62,28 +92,49 @@ Route::group([], function () {
 });
 
 // Protected routes (requires authentication)
-Route::group(['middleware' => ['auth:api']], function () {    // User profile routes
-    Route::get('/profile', [AuthController::class, 'profile']);
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::post('/refresh', [AuthController::class, 'refresh']);
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
+    Route::prefix('auth')->group(function () {
+        Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');;
+        Route::post('/refresh', [AuthController::class, 'refresh']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/profile', [AuthController::class, 'profile']);
+    });
+});
+
+    // Protected routes (requires authentication and role-based access)
+    // Route::group( [],function () {    // User profile routes
+    // Route::middleware(['jwt.auth'])->get('/profile', [AuthController::class, 'profile']);
+    // Route::post('/logout', [AuthController::class, 'logout']);
+    // Route::post('/refresh', [AuthController::class, 'refresh']);
 
     /*
     |--------------------------------------------------------------------------
     | Example Event Routes (commented out)
     |--------------------------------------------------------------------------
     |
-    // Route::prefix('events')->group(function () {
-    //     Route::get('/', [EventController::class, 'index']);     // Get all events
-    //     Route::post('/', [EventController::class, 'store']);    // Create event
-    //     Route::get('/{event}', [EventController::class, 'show']);    // Get single event
-    //     Route::put('/{event}', [EventController::class, 'update']);  // Update event
-    //     Route::delete('/{event}', [EventController::class, 'destroy']); // Delete event
-    //     
-    //     // Event registration
-    //     Route::post('/{event}/register', [EventController::class, 'register']);
-    //     Route::delete('/{event}/cancel', [EventController::class, 'cancelRegistration']);
-    // });
+    */
+    Route::prefix('events')->group(function () {
+        Route::get('/', [EventController::class, 'index']); // List all events
+        Route::post('/', [EventController::class, 'store'])->middleware('role:admin');
 
+        // Specific routes FIRST (these need to come before the generic /{event_flexible})
+        Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
+        Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
+        Route::get('/{event_flexible}/banner', [EventController::class, 'banner']);
+
+        /* Event Sessions */
+        Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
+        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
+        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
+        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+
+        // Generic routes LAST
+        Route::get('/{event_flexible}', [EventController::class, 'show']);
+        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+    });
+    /*
     |--------------------------------------------------------------------------
     | Example Category Routes (commented out)
     |--------------------------------------------------------------------------
@@ -99,80 +150,96 @@ Route::group(['middleware' => ['auth:api']], function () {    // User profile ro
     //     Route::get('/{user}', [UserController::class, 'show']);     // Get user details
     //     Route::put('/{user}', [UserController::class, 'update']);   // Update user
     //     Route::delete('/{user}', [UserController::class, 'destroy']); // Delete user
-    //     Route::patch('/{user}/role', [UserController::class, 'updateRole']); // Update role
     // });
     */
-});
+    // });
 
-//companyController still need admin middleware 
-Route::prefix('companies')->group(function () {
-    Route::post('/', [CompanyController::class, 'store']);
-    Route::get('/', [CompanyController::class, 'index']);
-    Route::get('/{id}', [CompanyController::class, 'show']);
-    Route::put('/{id}', [CompanyController::class, 'update']);
-    Route::post('/{id}/approve', [CompanyController::class, 'approve']);
-    Route::post('/{id}/reject', [CompanyController::class, 'reject']);
-    Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
-
-});
-
-// media controller 
-Route::prefix('media')->group(function () {
-    Route::post('/upload', [MediaController::class, 'upload']);
-    Route::get('/{id}', [MediaController::class, 'download']);
-    Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
-    Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
-});
-
-// dashboard controller
-Route::middleware(['auth'])->prefix('dashboard')->group(function () {
-    Route::get('/', [DashboardController::class, 'index']);
-    Route::get('/admin', [DashboardController::class, 'adminDashboard']);
-    Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
-    Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
-    
-    // admin subroutes
-    Route::middleware('role:admin')->prefix('admin')->group(function () {
-        Route::get('/overview', [DashboardController::class, 'adminOverview']);
-        Route::get('/events', [DashboardController::class, 'adminEvents']);
-        Route::get('/users', [DashboardController::class, 'adminUsers']);
-        Route::get('/companies', [DashboardController::class, 'adminCompanies']);
-        Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
+    //companyController still need admin middleware 
+    Route::prefix('companies')->group(function () {
+        Route::post('/', [CompanyController::class, 'store']);
+        Route::get('/', [CompanyController::class, 'index']);
+        Route::get('/{id}', [CompanyController::class, 'show']);
+        Route::put('/{id}', [CompanyController::class, 'update']);
+        Route::post('/{id}/approve', [CompanyController::class, 'approve']);
+        Route::post('/{id}/reject', [CompanyController::class, 'reject']);
+        Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
     });
 
-});
+    // media controller 
+    Route::prefix('media')->group(function () {
+        Route::post('/upload', [MediaController::class, 'upload']);
+        Route::get('/{id}', [MediaController::class, 'download']);
+        Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
+        Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
+    });
 
- // Job Fair Routes No Middleware Yet
-Route::prefix('job-fairs')->group(function(){
+    // dashboard controller
+    Route::middleware(['auth'])->prefix('dashboard')->group(function () {
+        Route::get('/', [DashboardController::class, 'index']);
+        Route::get('/admin', [DashboardController::class, 'adminDashboard']);
+        Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
+        Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
+
+        // admin subroutes
+        Route::middleware('role:admin')->prefix('admin')->group(function () {
+            Route::get('/overview', [DashboardController::class, 'adminOverview']);
+            Route::get('/events', [DashboardController::class, 'adminEvents']);
+            Route::get('/users', [DashboardController::class, 'adminUsers']);
+            Route::get('/companies', [DashboardController::class, 'adminCompanies']);
+            Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
+        });
+    }); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
+
+// Job Fair Controllers
+Route::prefix('job-fairs')->group(function () {
     Route::get('/', [JobFairController::class, 'index']);
     Route::get('/{job_fair_id}', [JobFairController::class, 'show']);
     Route::post('/', [JobFairController::class, 'store']);
-    Route::put('/{job_fair_id}', [JobFairController::class, 'update']);
-    Route::delete('/{job_fair_id}', [JobFairController::class, 'destroy']);
-    Route::get('/{job_fair_id}/companies', [JobFairController::class, 'Companies']);
-    Route::get('/{job_fair_id}/statistics', [JobFairController::class, 'statistics']);
+    Route::put('/{id}', [JobFairController::class, 'update']);
+    Route::delete('/{id}', [JobFairController::class, 'destroy']);
+    Route::get('/{id}/companies', [JobFairController::class, 'Companies']);
+    Route::get('/{id}/statistics', [JobFairController::class, 'statistics']);
+    // Company submits participation
+    Route::post('/{id}/participate', [JobFairParticipationController::class, 'store']);
+    // Admin views allparticipations
+    Route::get('/{id}/participations', [JobFairParticipationController::class, 'index']);
+    // Admin views a specific participation
+    Route::get('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
+    // Admin approves/rejects
+    Route::put('/{id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
+});
 
-    Route::post('/{job_fair_id}/participate', [JobFairParticipationController::class, 'store']);
-    Route::get('/{job_fair_id}/participations', [JobFairParticipationController::class, 'index']);
-    Route::get('/{job_fair_id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'show']);
-    Route::put('/{job_fair_id}/participations/{participation_company_id}', [JobFairParticipationController::class, 'review']);
 
-    Route::get('/{job_fair_id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerParticipation']);
-    Route::get('{job_fair_id}/job-profiles', [JobProfileController::class, 'jobProfilesPerJobFair']);
-    Route::post('/{job_fair_id}/participations/{participation_company_id}/job-profiles', [JobProfileController::class, 'store']);
-    Route::get('/job-profiles/{job_profile_id}', [JobProfileController::class, 'show']);
-    Route::put('/job-profiles/{job_profile_id}', [JobProfileController::class, 'update']);
-    Route::delete('/job-profiles/{job_profile_id}', [JobProfileController::class, 'destroy']);
+// Feedback Routes
+Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
 
-    Route::get('/{job_fair_id}/interview-slots', [InterviewSlotController::class, 'jobFairSlots']);
-    Route::get('/{job_fair_id}/participations/{participation_id}/interview-slots', [InterviewSlotController::class, 'participationSlots']);
-    Route::post('/{job_fair_id}/participations/{participation_id}/interview-slots', [InterviewSlotController::class, 'store']);
-    Route::get('/interview-slots/{slot_id}', [InterviewSlotController::class, 'show']);
-    Route::put('/interview-slots/{slot_id}', [InterviewSlotController::class, 'update']);
-    Route::delete('/interview-slots/{slot_id}', [InterviewSlotController::class, 'destroy']);
+    // Get feedback forms for an event (all users)
+    Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
+    // Create feedback form (admin only)
+    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
+    // Submit feedback response (students)
+    Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
+    // Get feedback responses (admin only)
+    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
+    // Toggle form status (admin only)
+    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
+});
 
-    Route::post('{job_fair_id}/interview-requests', [InterviewRequestController::class, 'store']);
-    Route::get('{job_fair_id}/interview-requests/my', [InterviewRequestController::class, 'myRequests']);
-    Route::get('{job_fair_id}/interview-requests/company', [InterviewRequestController::class, 'companyRequests']);
-    Route::put('interview-requests/{request_id}/review', [InterviewRequestController::class, 'review']);
+
+// Notifications Routes 
+Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+});
+
+
+
+// Bulk Messages Routes 
+Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::get('/', [BulkMessageController::class, 'index']);
+    Route::post('/', [BulkMessageController::class, 'store']);
+    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
+    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
 });

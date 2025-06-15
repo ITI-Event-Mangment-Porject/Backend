@@ -84,15 +84,6 @@ class User extends Authenticatable
         return $this->belongsTo(Track::class);
     }
 
-    /**
-     * User roles relationship
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot(['assigned_by', 'assigned_at', 'is_active'])
-                    ->wherePivot('is_active', true);
-    }
     public function eventRegistrations()
     {
         return $this->hasMany(EventRegistration::class);
