@@ -27,10 +27,10 @@ class JobFairController extends BaseApiController
         return $this->sendResponse($jobFairs, 'Job fairs retrieved successfully.');
     }
 
-    public function show($jobFairId)
+    public function show($jobfairid)
     {
         $event = Event::with('visibilityTracks.track:id,name')
-            ->where('id', $jobFairId)
+            ->where('id', $jobfairid)
             ->where('type', 'Job Fair')
             ->first();
 

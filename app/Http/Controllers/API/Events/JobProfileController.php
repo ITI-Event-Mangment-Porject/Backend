@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\API\Events;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\JobFair\JobFairParticipation;
 use App\Models\JobFair\JobProfile;
 use App\Models\JobFair\JobProfileTrack;
-use Egulias\EmailValidator\Result\Reason\RFCWarnings;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Http\Requests\Events\StoreJobProfileRequest;
+use App\Http\Requests\Events\UpdateJobProfileRequest;
 use Illuminate\Http\Request;
 
-class JobProfileController extends Controller
+class JobProfileController extends BaseApiController
 {
     public function jobProfilesPerParticipation($jobFairId, $participationId)
     {
@@ -22,13 +24,13 @@ class JobProfileController extends Controller
         ->first();
 
         if (!$participation) {
-            return response()->json(['message' => 'Participation not found or not approved.'], 404);
+            return $this->sendError('Participation not found or not approved.', [], 404);
         }
 
-        return response()->json([
+        return $this->sendResponse([
             'company_id' => $participation->company_id,
             'job_profiles' => $participation->jobProfiles
-        ]);
+        ], 'Job profiles retrieved successfully.');
     }
 
     public function jobProfilesPerJobFair($jobFairId)
@@ -45,12 +47,12 @@ class JobProfileController extends Controller
         ->latest()
         ->get();
 
-        return response()->json([
+        return $this->sendResponse([
             'job_profiles' => $jobProfiles
-        ]);
+        ], 'Job profiles retrieved successfully.');
     }
 
-    public function store(Request $request, $jobFairId, $participationId)
+    public function store(StoreJobProfileRequest $request, $jobFairId, $participationId)
     {
         $participation = JobFairParticipation::where('id', $participationId)
             ->where('event_id', $jobFairId)
@@ -58,93 +60,78 @@ class JobProfileController extends Controller
             ->first();
 
         if (!$participation) {
-            return response()->json(['message' => 'Participation not found or not approved.'], 403);
+            return $this->sendError('Participation not found or not approved.', [], 403);
         }
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'employment_type' => 'required|in:Full-time,Part-time,Internship,Contract',
-            'location' => 'nullable|string|max:255',
-            'positions_available' => 'required|integer|min:1',
-            'tracks' => 'nullable|array',
-            'tracks.*.track_id' => 'required|integer|exists:tracks,id',
-            'tracks.*.preference_level' => 'required|in:required,preferred,acceptable'
-        ]);
+        $validated = $request->validated();
 
-        $jobProfile = new JobProfile($validated);
-        $jobProfile->participation_id = $participation->id;
-        $jobProfile->save();
+        try {
+            $jobProfile = new JobProfile($validated);
+            $jobProfile->participation_id = $participation->id;
+            $jobProfile->save();
 
-        // Handle tracks
-        if (isset($validated['tracks'])) {
-            foreach ($validated['tracks'] as $track) {
-                JobProfileTrack::create([
-                    'job_profile_id' => $jobProfile->id,
-                    'track_id' => $track['track_id'],
-                    'preference_level' => $track['preference_level']
-                ]);
+            // Handle tracks
+            if (isset($validated['tracks'])) {
+                foreach ($validated['tracks'] as $track) {
+                    JobProfileTrack::create([
+                        'job_profile_id' => $jobProfile->id,
+                        'track_id' => $track['track_id'],
+                        'preference_level' => $track['preference_level']
+                    ]);
+                }
             }
-        }
 
-        return response()->json([
-            'message' => 'Job profile created successfully.',
-            'job_profile' => $jobProfile->load('trackPreferences.track') // eager load tracks
-        ], 201);
+            return $this->sendResponse(
+                $jobProfile->load('trackPreferences.track'),
+                'Job profile created successfully.',
+                201
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to create job profile.', [$e->getMessage()], 500);
+        }
     }
-    public function update(Request $request, $jobProfileId)
+
+    public function update(UpdateJobProfileRequest $request, $jobProfileId)
     {
-        // 1. Load the job profile with its participation + event
         $jobProfile = JobProfile::with('participation')
             ->where('id', $jobProfileId)
             ->first();
 
         if (!$jobProfile) {
-            return response()->json(['message' => 'Job profile not found.'], 404);
+            return $this->sendError('Job profile not found.', [], 404);
         }
 
         $participation = $jobProfile->participation;
 
-        // 2. Ensure participation is valid and approved
         if (!$participation || $participation->status !== 'approved') {
-            return response()->json(['message' => 'Associated participation is not approved.'], 403);
+            return $this->sendError('Associated participation is not approved.', [], 403);
         }
 
-        // 3. Validate input
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'requirements' => 'nullable|string',
-            'employment_type' => 'sometimes|in:Full-time,Part-time,Internship,Contract',
-            'location' => 'nullable|string|max:255',
-            'positions_available' => 'sometimes|integer|min:1',
+        $validated = $request->validated();
 
-            'track_preferences' => 'nullable|array',
-            'track_preferences.*.track_id' => 'required|integer|exists:tracks,id',
-            'track_preferences.*.preference_level' => 'required|in:required,preferred,acceptable'
-        ]);
+        try {
+            $jobProfile->update($validated);
 
-        // 4. Update the job profile base fields
-        $jobProfile->update($validated);
+            if (isset($validated['track_preferences'])) {
+                $jobProfile->trackPreferences()->delete();
 
-        // 5. Handle track preferences if sent
-        if (isset($validated['track_preferences'])) {
-            $jobProfile->trackPreferences()->delete();
-
-            foreach ($validated['track_preferences'] as $track) {
-                $jobProfile->trackPreferences()->create([
-                    'track_id' => $track['track_id'],
-                    'preference_level' => $track['preference_level'],
-                ]);
+                foreach ($validated['track_preferences'] as $track) {
+                    $jobProfile->trackPreferences()->create([
+                        'track_id' => $track['track_id'],
+                        'preference_level' => $track['preference_level'],
+                    ]);
+                }
             }
-        }
 
-        return response()->json([
-            'message' => 'Job profile updated successfully.',
-            'job_profile' => $jobProfile->load('trackPreferences.track'),
-        ]);
+            return $this->sendResponse(
+                $jobProfile->load('trackPreferences.track'),
+                'Job profile updated successfully.'
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to update job profile.', [$e->getMessage()], 500);
+        }
     }
+
     public function show($jobProfileId)
     {
         $jobProfile = JobProfile::with([
@@ -153,27 +140,31 @@ class JobProfileController extends Controller
         ])->find($jobProfileId);
 
         if (!$jobProfile) {
-            return response()->json(['message' => 'Job profile not found.'], 404);
+            return $this->sendError('Job profile not found.', [], 404);
         }
 
-        return response()->json([
-            'job_profile' => $jobProfile
-        ]);
+        return $this->sendResponse(
+            $jobProfile,
+            'Job profile retrieved successfully.'
+        );
     }
+
     public function destroy($jobProfileId)
     {
         $jobProfile = JobProfile::find($jobProfileId);
 
         if (!$jobProfile) {
-            return response()->json(['message' => 'Job profile not found.'], 404);
+            return $this->sendError('Job profile not found.', [], 404);
         }
 
-        $jobProfile->delete();
-
-        return response()->json(['message' => 'Job profile deleted successfully.']);
+        try {
+            $jobProfile->delete();
+            return $this->sendResponse(
+                null,
+                'Job profile deleted successfully.'
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to delete job profile.', [$e->getMessage()], 500);
+        }
     }
-
-
-
-
 }

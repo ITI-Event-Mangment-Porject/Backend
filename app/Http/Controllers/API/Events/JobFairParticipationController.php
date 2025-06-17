@@ -35,15 +35,12 @@ class JobFairParticipationController extends BaseApiController
                     ->first();
 
                 if ($existing) {
-                    return $this->sendError(
-                        'This company has already submitted participation for this job fair.',
-                        ['existing_participation_id' => $existing->id],
-                        409
-                    );
+                    // Return error response from inside transaction
+                    throw new \Exception('duplicate');
                 }
 
                 // Create participation
-                $participation = JobFairParticipation::create([
+                return JobFairParticipation::create([
                     'event_id' => $jobFairId,
                     'company_id' => $company->id,
                     'status' => 'pending',
@@ -52,12 +49,26 @@ class JobFairParticipationController extends BaseApiController
                     'submitted_at' => now(),
                     'need_branding' => $request->input('need_branding', false),
                 ]);
-
-                return $this->sendResponse($participation, 'Participation submitted successfully.', 201);
             });
 
-            return $participation;
+            if ($participation === null) {
+                // This means duplicate was found
+                return $this->sendError(
+                    'This company has already submitted participation for this job fair.',
+                    [],
+                    409
+                );
+            }
+
+            return $this->sendResponse($participation, 'Participation submitted successfully.', 201);
         } catch (\Exception $e) {
+            if ($e->getMessage() === 'duplicate') {
+                return $this->sendError(
+                    'This company has already submitted participation for this job fair.',
+                    [],
+                    409
+                );
+            }
             return $this->sendError('Failed to submit participation.', [$e->getMessage()], 500);
         }
     }
@@ -92,10 +103,7 @@ class JobFairParticipationController extends BaseApiController
             }
 
             return $this->sendResponse(
-                [
-                    'message' => "Participation {$validated['status']} successfully.",
-                    'participation' => $participation->fresh(),
-                ],
+                $participation->fresh(),
                 "Participation {$validated['status']} successfully."
             );
         } catch (ModelNotFoundException $e) {

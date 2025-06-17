@@ -2,165 +2,171 @@
 
 namespace App\Http\Controllers\API\Events;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\Event\Event;
 use App\Models\JobFair\InterviewSlot;
 use App\Models\JobFair\JobFairParticipation;
-use Illuminate\Http\Request;
+use App\Http\Requests\Events\StoreInterviewSlotRequest;
+use App\Http\Requests\Events\UpdateInterviewSlotRequest;
 
-class InterviewSlotController extends Controller
+class InterviewSlotController extends BaseApiController
 {
     public function jobFairSlots($jobFairId)
     {
-        // Make sure it's a real Job Fair event
         $event = Event::where('id', $jobFairId)
             ->where('type', 'Job Fair')
             ->first();
 
         if (!$event) {
-            return response()->json([
-                'message' => 'Job Fair not found.'
-            ], 404);
+            return $this->sendError('Job Fair not found.', [], 404);
         }
 
-        // Fetch all interview slots for this job fair (via participation)
         $slots = InterviewSlot::whereHas('participation', function ($query) use ($jobFairId) {
                 $query->where('event_id', $jobFairId);
             })
-            ->with('participation.company') // to show company names if needed
+            ->with('participation.company')
             ->orderBy('slot_date')
             ->orderBy('start_time')
             ->get();
 
-        return response()->json([
+        return $this->sendResponse([
             'job_fair_id' => $jobFairId,
             'slots' => $slots
-        ]);
+        ], 'Interview slots retrieved successfully.');
     }
 
-    
     public function participationSlots($jobFairId, $participationId)
     {
-        // Check if the participation belongs to the given job fair
         $participation = JobFairParticipation::where('id', $participationId)
             ->where('event_id', $jobFairId)
             ->first();
 
         if (!$participation) {
-            return response()->json([
-                'message' => 'Participation not found for this job fair.'
-            ], 404);
+            return $this->sendError('Participation not found for this job fair.', [], 404);
         }
 
-        // Fetch all slots for this participation
         $slots = InterviewSlot::where('participation_id', $participationId)
             ->orderBy('slot_date')
             ->orderBy('start_time')
             ->get();
 
-        return response()->json([
+        return $this->sendResponse([
             'job_fair_id' => $jobFairId,
             'participation_id' => $participationId,
             'slots' => $slots
-        ]);
+        ], 'Interview slots retrieved successfully.');
     }
-    public function store(Request $request, $jobFairId, $participationId)
-    {
-        $validated = $request->validate([
-            'slot_date' => 'required|date',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'duration_minutes' => 'required|integer|min:5|max:120',
-            'max_interviews_per_slot' => 'required|integer|min:1|max:20',
-            'is_break' => 'boolean',
-            'break_reason' => 'nullable|string|max:255',
-            'is_available' => 'boolean',
-        ]);
 
-        // Confirm the participation exists and belongs to this job fair
+    public function store(StoreInterviewSlotRequest $request, $jobFairId, $participationId)
+    {
+        $validated = $request->validated();
+
         $participation = JobFairParticipation::where('id', $participationId)
             ->where('event_id', $jobFairId)
             ->first();
 
         if (!$participation) {
-            return response()->json([
-                'message' => 'Participation not found for this job fair.'
-            ], 404);
+            return $this->sendError('Participation not found for this job fair.', [], 404);
         }
 
-        $slot = InterviewSlot::create([
-            'participation_id' => $participation->id,
-            'slot_date' => $validated['slot_date'],
-            'start_time' => $validated['start_time'],
-            'end_time' => $validated['end_time'],
-            'duration_minutes' => $validated['duration_minutes'],
-            'max_interviews_per_slot' => $validated['max_interviews_per_slot'],
-            'is_break' => $validated['is_break'] ?? false,
-            'break_reason' => $validated['break_reason'] ?? null,
-            'is_available' => $validated['is_available'] ?? true,
-        ]);
+        try {
+            $slot = InterviewSlot::create([
+                'participation_id' => $participation->id,
+                'slot_date' => $validated['slot_date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'duration_minutes' => $validated['duration_minutes'],
+                'max_interviews_per_slot' => $validated['max_interviews_per_slot'],
+                'is_break' => $validated['is_break'] ?? false,
+                'break_reason' => $validated['break_reason'] ?? null,
+                'is_available' => $validated['is_available'] ?? true,
+            ]);
 
-        return response()->json([
-            'message' => 'Interview slot created successfully.',
-            'slot' => $slot
-        ], 201);
+            return $this->sendResponse(
+                $slot,
+                'Interview slot created successfully.',
+                201
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to create interview slot.', [$e->getMessage()], 500);
+        }
     }
 
-    public function update(Request $request, $slotId)
+    public function show($jobFairId, $participationId, $slotId)
     {
-        $validated = $request->validate([
-            'slot_date' => 'sometimes|date',
-            'start_time' => 'sometimes|date_format:H:i',
-            'end_time' => 'sometimes|date_format:H:i|after:start_time',
-            'duration_minutes' => 'sometimes|integer|min:5|max:120',
-            'max_interviews_per_slot' => 'sometimes|integer|min:1|max:20',
-            'is_break' => 'sometimes|boolean',
-            'break_reason' => 'nullable|string|max:255',
-            'is_available' => 'sometimes|boolean',
-        ]);
-
-        $slot = InterviewSlot::find($slotId);
+        $slot = InterviewSlot::with('participation.company')
+            ->where('id', $slotId)
+            ->where('participation_id', $participationId)
+            ->first();
 
         if (!$slot) {
-            return response()->json(['message' => 'Interview slot not found.'], 404);
+            return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        $slot->update($validated);
+        // Optional: check jobFairId matches
+        if ($slot->participation->event_id != $jobFairId) {
+            return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
 
-        return response()->json([
-            'message' => 'Interview slot updated successfully.',
-            'slot' => $slot
-        ]);
+        return $this->sendResponse(
+            $slot,
+            'Interview slot retrieved successfully.'
+        );
     }
-    public function destroy($slotId)
+
+    public function update(UpdateInterviewSlotRequest $request, $jobFairId, $participationId, $slotId)
     {
-        $slot = InterviewSlot::find($slotId);
+        $validated = $request->validated();
+
+        $slot = InterviewSlot::where('id', $slotId)
+            ->where('participation_id', $participationId)
+            ->first();
 
         if (!$slot) {
-            return response()->json(['message' => 'Interview slot not found.'], 404);
+            return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        $slot->delete(); // permanently deletes the record
+        // Optional: check jobFairId matches
+        if ($slot->participation->event_id != $jobFairId) {
+            return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
 
-        return response()->json([
-            'message' => 'Interview slot deleted successfully.'
-        ]);
+        try {
+            $slot->update($validated);
+
+            return $this->sendResponse(
+                $slot->refresh(),
+                'Interview slot updated successfully.'
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to update interview slot.', [$e->getMessage()], 500);
+        }
     }
-    public function show($id)
+
+    public function destroy($jobFairId, $participationId, $slotId)
     {
-        $slot = InterviewSlot::with([
-            'participation.company', // Show company info
-        ])->find($id);
+        $slot = InterviewSlot::where('id', $slotId)
+            ->where('participation_id', $participationId)
+            ->first();
 
         if (!$slot) {
-            return response()->json([
-                'message' => 'Interview slot not found.'
-            ], 404);
+            return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        return response()->json([
-            'slot' => $slot
-        ]);
-    }
+        // Optional: check jobFairId matches
+        if ($slot->participation->event_id != $jobFairId) {
+            return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
 
+        try {
+            $slot->delete();
+
+            return $this->sendResponse(
+                null,
+                'Interview slot deleted successfully.'
+            );
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to delete interview slot.', [$e->getMessage()], 500);
+        }
+    }
 }
