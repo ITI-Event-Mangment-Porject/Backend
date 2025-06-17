@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
+use App\Http\Controllers\API\Events\LiveEventController;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
@@ -55,6 +56,13 @@ Route::prefix('test/tracks')->group(function () {
     Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
     Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
     Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
+});
+
+// Test routes for LiveEvent API endpoints (no authentication required for testing)
+Route::prefix('test/live')->group(function () {
+    Route::get('/events/{id}/status', [LiveEventController::class, 'status']);     // Get live status of an event
+    Route::post('/events/{id}/start', [LiveEventController::class, 'start']);      // Start a live event
+    Route::post('/events/{id}/end', [LiveEventController::class, 'end']);          // End a live event
 });
 
 // Public routes
@@ -125,6 +133,13 @@ Route::prefix('auth')->group(function () {
         Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
         Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
         Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+
+        // Live Event routes
+        Route::prefix('{event_flexible}/live')->group(function () {
+            Route::get('/status', [LiveEventController::class, 'status']);                      // Get live status (public/company)
+            Route::post('/start', [LiveEventController::class, 'start'])->middleware('role:admin');    // Start live event (admin only)
+            Route::post('/end', [LiveEventController::class, 'end'])->middleware('role:admin');        // End live event (admin only)
+        });
 
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
