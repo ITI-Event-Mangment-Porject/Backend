@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\API\Events\BrandingDayController;
 use App\Http\Controllers\API\Events\InterviewRequestController;
 use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
@@ -223,6 +224,13 @@ Route::prefix('job-fairs')->group(function(){
     Route::get('{jobFairId}/interview-requests/my', [InterviewRequestController::class, 'myRequests']);
     Route::get('{jobFairId}/job-profiles/{jobProfileId}/interview-requests', [InterviewRequestController::class, 'jobProfileRequests']);
     Route::put('interview-requests/{requestId}/review', [InterviewRequestController::class, 'review']);
+
+    Route::get('/{jobFairId}/branding-day/candidates', [BrandingDayController::class, 'candidates']);
+    Route::get('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'index']);
+    Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store']);
+    Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update']);
+    Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy']);
+
 });
 
 // Feedback Routes
