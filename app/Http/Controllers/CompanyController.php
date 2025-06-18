@@ -35,17 +35,35 @@ class CompanyController extends BaseApiController
     public function index(Request $request)
     {
         try {
-            // i select all fileds from company and like i make where condition on it .
-            $companies = QueryBuilder::for(Company::class)
+            $query = QueryBuilder::for(Company::class)
+                ->withCount([
+                    'jobFairParticipations',
+                    'interviewRequests',
+                    'interviewQueues as filled_interviews_count',
+                ])
                 ->allowedFilters([
                     AllowedFilter::exact('is_approved'),
                     AllowedFilter::exact('industry'),
                     AllowedFilter::exact('size'),
+                    AllowedFilter::partial('name'),
+                    AllowedFilter::partial('location'),
                 ])
-                ->defaultSort('-created_at')
-                ->paginate($request->get('per_page', 15)); 
-    
-            return $this->sendResponse($companies, 'Get all Companies', 200);
+                ->defaultSort('-created_at');
+            $companies = $query->paginate($request->get('per_page', 15));
+            $companies->getCollection()->transform(function ($company) {
+                $company->available_interviews = $company->interview_requests_count - $company->filled_interviews_count;
+                return $company;
+            });
+
+            $totalCount = Company::count();
+            $approvedCount = Company::where('is_approved', true)->count();
+
+            return $this->sendResponse([
+                'companies' => $companies,
+                'total_count' => $totalCount,
+                'approved_count' => $approvedCount
+            ], 'Get all Companies', 200);
+
         } catch (Exception $e) {
             return $this->sendError('Failed to retrieve companies', ['error' => $e->getMessage()], 500);
         }
@@ -55,7 +73,7 @@ class CompanyController extends BaseApiController
     {
         try {
             $company = Company::findOrFail($id);
-            return $this->sendResponse($company,'company retrieved successfully',200);
+            return $this->sendResponse($company, 'company retrieved successfully', 200);
         } catch (ModelNotFoundException $e) {
             return $this->sendError('company not found', ['error' => $e->getMessage()], 404);
 

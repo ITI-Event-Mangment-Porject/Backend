@@ -7,6 +7,7 @@ use App\Exports\EventsReportExport;
 use App\Exports\FeedbackReportExport;
 use App\Http\Controllers\API\BaseApiController;
 use App\Models\Event\Event;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -34,15 +35,16 @@ class ReportController extends BaseApiController
         }
     }
 
-    public function attendanceReports()
+    public function attendanceReports(Request $request)
     {
         try {
             $events = QueryBuilder::for(Event::class)
                 ->with(['registrations.user'])
                 ->allowedFilters([
                     AllowedFilter::partial('title'),
-                ])
-                ->get();
+                ])->paginate($request->get('per_page', 5));
+
+
 
             if ($events->isEmpty()) {
                 return $this->sendError('There are no events found.', [], 404);
@@ -55,6 +57,7 @@ class ReportController extends BaseApiController
 
                 return [
                     'event' => $event->title,
+                    'event_date' => Carbon::parse($event->start_time)->format('Y-m-d H:i:s'),
                     'total_registration' => $validRegistrations->count(),
                     'attendees' => $validRegistrations->map(function ($r) {
                         return [
@@ -78,7 +81,7 @@ class ReportController extends BaseApiController
     {
         try {
             $events = QueryBuilder::for(Event::class)
-                ->with(['feedbackResponses.user', 'feedbackForms']) 
+                ->with(['feedbackResponses.user', 'feedbackForms'])
                 ->allowedFilters([
                     AllowedFilter::partial('title'),
                     AllowedFilter::partial('start_time'),
@@ -91,6 +94,7 @@ class ReportController extends BaseApiController
 
             $data = $events->map(function ($event) {
                 $responses = $event->feedbackResponses;
+
                 $form = $event->feedbackForms()->first();
 
                 // Extract questions from form config
@@ -102,7 +106,7 @@ class ReportController extends BaseApiController
                         : $form->form_config;
                     $questions = $formConfig['fields'] ?? [];
                 }
-
+               
                 if ($responses->isEmpty()) {
                     return [
                         'event' => $event->title,
@@ -111,40 +115,35 @@ class ReportController extends BaseApiController
                         'feedbacks' => []
                     ];
                 }
-
                 return [
                     'event' => $event->title,
                     'feedback_count' => $responses->count(),
                     'average_rating' => round($responses->avg('overall_rating'), 2),
                     'feedbacks' => $responses->map(function ($response) use ($questions) {
-                        // Map questions to answers
                         $answers = collect($questions)->map(function ($field) use ($response) {
                             $label = $field['label'] ?? 'Unnamed Question';
-
-                            // Convert label to snake_case to match response keys
-                            $key = \Str::snake(strtolower($label));
-
-                            // Get the answer from response data
-                            $answer = '[No Answer]';
-                            if (isset($response->responses) && is_array($response->responses)) {
-                                $answer = $response->responses[$key] ?? '[No Answer]';
-                            } elseif (isset($response->responses) && is_string($response->responses)) {
-                                // If responses is json string, decode it
-                                $decodedResponses = json_decode($response->responses, true);
-                                $answer = $decodedResponses[$key] ?? '[No Answer]';
-                            }
+                            $labelKeyMap = [
+                                'Overall Event Rating' => 'overall_rating',
+                                'What did you like most?' => 'liked_most',
+                                'What could be improved?' => 'improvements',
+                                'Organization Rating' => 'organization_rating',
+                            ];
+                            $key = $labelKeyMap[$label] ?? \Str::snake(strtolower($label));
+                            $answersArray = is_array($response->responses)
+                                ? $response->responses
+                                : json_decode($response->responses ?? '{}', true);
+                            $answer = $answersArray[$key] ?? '[No Answer]';
                             return [
                                 'question' => $label,
                                 'answer' => $answer,
                             ];
                         })->toArray();
-
                         return [
                             'user' => $response->user
                                 ? ($response->user->first_name . " " . $response->user->last_name)
                                 : 'Unknown',
                             'email' => $response->user ? $response->user->email : 'N/A',
-                            'phone'=>$response->user->phone,
+                            'phone' => $response->user->phone,
                             'rating' => $response->overall_rating,
                             'answers' => $answers,
                             'submitted_at' => $response->submitted_at->format('Y-m-d H:i:s'),
