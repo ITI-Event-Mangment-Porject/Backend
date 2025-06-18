@@ -6,11 +6,11 @@ use App\Http\Controllers\API\BaseApiController;
 use App\Models\Company\Company;
 use App\Models\Event\Event;
 use App\Models\JobFair\JobFairParticipation;
-use DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Requests\Events\StoreJobFairParticipationRequest;
 use App\Http\Requests\Events\UpdateJobFairParticipationRequest;
 use App\Http\Requests\Events\ReviewJobFairParticipationRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class JobFairParticipationController extends BaseApiController

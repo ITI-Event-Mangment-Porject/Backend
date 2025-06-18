@@ -13,12 +13,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-use app\Models\RegistrationAndInterview\InterviewRequest;
-use app\Models\RegistrationAndInterview\InterviewQueue;
-use app\Models\RegistrationAndInterview\EventRegistration;
+use App\Models\RegistrationAndInterview\InterviewRequest;
+use App\Models\RegistrationAndInterview\InterviewQueue;
+use App\Models\RegistrationAndInterview\EventRegistration;
 use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
-class User extends Authenticatable
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+
+
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles ;
@@ -84,6 +88,10 @@ class User extends Authenticatable
         return $this->belongsTo(Track::class);
     }
 
+    /**
+     * User roles relationship
+     */
+    
     public function eventRegistrations()
     {
         return $this->hasMany(EventRegistration::class);
@@ -133,5 +141,18 @@ class User extends Authenticatable
     public function getFullNameAttribute()
     {
         return $this->first_name . ' ' . $this->last_name;
+    }
+    
+    public function getJWTIdentifier()
+    {
+        return $this->getKey(); // usually the user's ID
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     */
+    public function getJWTCustomClaims()
+    {
+        return []; // Add custom claims if needed
     }
 }
