@@ -9,8 +9,6 @@ use App\Http\Controllers\API\Events\LiveEventController;
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SettingController;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
@@ -250,63 +248,6 @@ Route::prefix('job-fairs')->group(function(){
     Route::put('interview-requests/{requestId}/review', [InterviewRequestController::class, 'review']);
 });
 
-//companyController still need admin middleware 
-Route::prefix('companies')->group(function () {
-    Route::get('/', [CompanyController::class, 'index']);
-    Route::get('/{id}', [CompanyController::class, 'show']);
-
-    Route::post('/', [CompanyController::class, 'store']);
-    Route::put('/{id}', [CompanyController::class, 'update']);
-    Route::post('/{id}/approve', [CompanyController::class, 'approve']);
-    Route::post('/{id}/reject', [CompanyController::class, 'reject']);
-    Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
-
-
-});
-
-// media controller 
-Route::prefix('media')->group(function () {
-    Route::get('/',[MediaController::class,'index']);
-    Route::post('/upload', [MediaController::class, 'upload']);
-    Route::get('/{id}/download', [MediaController::class, 'download']);
-    Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
-    Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
-});
-
-// dashboard controller
-Route::prefix('dashboard')->group(function () {
-    Route::get('/', [DashboardController::class, 'index']);
-    Route::get('/student', [DashboardController::class, 'studentDashboard']);
-    Route::get('/company', [DashboardController::class, 'companyDashboard']);
-    Route::get('/staff', [DashboardController::class, 'staffDashboard']);
-
-    // admin subroutes
-    Route::prefix('admin')->group(function () {
-        Route::get('/overview', [DashboardController::class, 'adminOverview']);
-        Route::get('/events', [DashboardController::class, 'adminEvents']);
-        Route::get('/users', [DashboardController::class, 'adminUsers']);
-        Route::get('/companies', [DashboardController::class, 'adminCompanies']);
-        Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
-    });
-
-});
-
-//setting controller  missing middleware of admin
-Route::prefix('settings')->group(function () {
-    Route::get('/', [SettingController::class, 'index']);
-    Route::put('/{key}', [SettingController::class, 'update']);
-    Route::get('/public', [SettingController::class, 'getPublic']); // all public settings
-});
-
-// missing middleware
-Route::prefix('/reports')->group(function () {
-    Route::get('/events', [ReportController::class, 'eventsReports']);
-    Route::get('/attendance', [ReportController::class, 'attendanceReports']);
-    Route::get('/feedback', [ReportController::class, 'feedbackReports']);
-    Route::get('/export', [ReportController::class, 'exportReports']);
-});
-
-
 // Feedback Routes
 Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
 
@@ -340,4 +281,3 @@ Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->grou
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);
     Route::get('/{id}/status', [BulkMessageController::class, 'status']);
 });
-

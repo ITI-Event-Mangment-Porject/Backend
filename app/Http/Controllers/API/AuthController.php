@@ -41,18 +41,9 @@ class AuthController extends BaseApiController
     
     public function __construct()
     {
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'last_name'=>'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            
-            'password' => 'required|string|min:8|confirmed',
-            'portal_user_id'=>'required|integer'
-
         $this->httpClient = new Client([
             'timeout' => 30,
             'connect_timeout' => 10,
-
         ]);
     }
     
@@ -210,27 +201,6 @@ class AuthController extends BaseApiController
             Log::error('Login error: ' . $e->getMessage());
             return $this->sendError('Login failed', [], 500);
         }
-
-
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name'=>$request->last_name,
-            'email' => $request->email,
-            'portal_user_id'=>$request->portal_user_id,
-            'password' => Hash::make($request->password)]);
-            
-
-        $token = JWTAuth::fromUser($user);
-
-        return $this->sendResponse([
-            'user' => $user->only(['id', 'name', 'email']),
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60,
-            'expires_at' => now()->addMinutes((float) config('jwt.ttl'))->toDateTimeString()
-        ], 'User registered successfully.');
-        
-
     }
     
     private function authenticateWithPortal($email, $password)

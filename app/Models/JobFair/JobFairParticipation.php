@@ -14,16 +14,13 @@ class JobFairParticipation extends Model
     use HasFactory;
     protected $fillable = [
         'event_id', 'company_id', 'status', 'special_requirements',
-
         'submitted_by', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_notes','need_branding',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
         'reviewed_at' => 'datetime',
-
         'need_branding' => 'boolean',
-
     ];
     protected static function newFactory()
     {
