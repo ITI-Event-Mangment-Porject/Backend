@@ -136,4 +136,10 @@ class Event extends Model
                                ->orWhere('archived_at', '>', now());
                      });
     }
+//     public function resolveRouteBinding($value, $field = null)
+// {
+//     return $this->where('id', $value)
+//                 ->orWhere('slug', $value)
+//                 ->firstOrFail();
+// }
 }
