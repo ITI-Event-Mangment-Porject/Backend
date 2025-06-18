@@ -104,6 +104,7 @@ return [
     'ttl' => (int) env('JWT_TTL', 60),
     'refresh_ttl' => 20160, // 2 weeks in minutes
     
+
     /*
     |--------------------------------------------------------------------------
     | Refresh time to live

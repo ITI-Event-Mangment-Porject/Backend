@@ -21,11 +21,12 @@ use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 
-
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles ;
+    use HasRoles;
+
 
     /**
      * The attributes that are mass assignable.
@@ -142,7 +143,7 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->first_name . ' ' . $this->last_name;
     }
-    
+
     public function getJWTIdentifier()
     {
         return $this->getKey(); // usually the user's ID

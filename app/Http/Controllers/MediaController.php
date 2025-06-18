@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\API\BaseApiController;
+use App\Http\Requests\StoreMediaRequest;
 use App\Models\Media\MediaFile;
 use Auth;
 // use Dotenv\Exception\ValidationException;
@@ -11,19 +13,42 @@ use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
 
-class MediaController extends Controller
+class MediaController extends BaseApiController
 {
-    public function upload(Request $request)
+    public function index(Request $request)
     {
         try {
-            $data = $request->validate([
-                'file' => 'file|required|max:5120|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,mp4,avi,mov,mp3,wav',
-                'file_type' => 'nullable|string|max:50',
-                'related_type' => 'nullable|string',
-                'related_id' => 'nullable|integer',
-                'is_public' => 'sometimes|boolean'
-            ]);
+            $media = QueryBuilder::for(MediaFile::class)
+                ->allowedFilters([
+                    AllowedFilter::exact('id'),
+                    AllowedFilter::exact('uploaded_by'),
+                    AllowedFilter::exact('is_public'),
+                    AllowedFilter::partial('filename'),
+                    AllowedFilter::partial('original_name'),
+                    AllowedFilter::partial('mime_type'),
+                    AllowedFilter::partial('file_type'),
+                    AllowedFilter::exact('related_type'),
+                    AllowedFilter::exact('related_id'),
+                    AllowedFilter::scope('uploaded_between'),
+                ])
+                ->allowedSorts(['uploaded_at', 'file_size', 'filename'])
+                ->defaultSort('-uploaded_at')
+                ->paginate($request->get('per_page', 15))
+                ->appends($request->query());
+
+            return $this->sendResponse($media, 'Media list fetched successfully');
+
+        } catch (Exception $e) {
+            return $this->sendError('Failed to fetch media list', [$e->getMessage()], 500);
+        }
+    }
+
+    public function upload(StoreMediaRequest $request)
+    {
+        try {
             $file = $request->file('file');
             $path = $file->store('media', 'public');
             $media = MediaFile::create([
@@ -39,70 +64,69 @@ class MediaController extends Controller
                 'is_public' => $request->boolean('is_public', false),
                 'uploaded_at' => now(),
             ]);
-            return response()->json([
-                'message' => 'file uploaded successfully',
+            return $this->sendResponse([
                 'media' => $media,
                 'url' => $media->url,
-            ], 201);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
+            ], 'File uploaded successfully', 201);
+
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Upload failed',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->sendError('Upload Failed', ['error' => $e->getMessage()], 500);
         }
     }
     public function download($id)
     {
         try {
             $media = MediaFile::findOrFail($id);
+
             if (!Storage::disk('public')->exists($media->file_path)) {
-                return response()->json(['message' => 'File not found'], 404);
+                return $this->sendError('File not found', [], 404);
             }
+
             return Storage::disk('public')->download($media->file_path, $media->original_name);
+
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Media not found'], 404);
+            return $this->sendError('Media not found', [], 404);
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Download failed',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->sendError('Download failed', ['error' => $e->getMessage()], 500);
         }
     }
+
     public function publicAccess($id)
     {
         try {
             $media = MediaFile::findOrFail($id);
+
             if (!$media->is_public) {
-                return response()->json(['message' => 'sorry this file is private'], 403);
+                return $this->sendError('Access Denied', ['This file is private'], 403);
             }
+
             if (!Storage::disk('public')->exists($media->file_path)) {
-                return response()->json(['message' => 'File is Not Found'], 404);
+                return $this->sendError('File Not Found', [], 404);
             }
-            return response()->json(['url' => $media->url], 200);
+
+            return $this->sendResponse(['url' => $media->url], 'Public file access granted');
+
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Media not found'], 404);
+            return $this->sendError('Media not found', [], 404);
         } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Failed to access file',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->sendError('Failed to access file', ['error' => $e->getMessage()], 500);
         }
     }
+
     public function destroy($id)
     {
         try {
             $media = MediaFile::findOrFail($id);
-            $user = Auth::user()??2;
+            // until we make auth 
+            // $user = Auth::user();
 
-            if ($media->uploaded_by !== $user->id && !$user->hasRole('admin')) {
-                return response()->json(['message' => 'Unauthorized'], 403);
-            }
+            // if (!$user) {
+            //     return $this->sendError('Unauthorized access', [], 401);
+            // }
+
+            // if ($media->uploaded_by !== $user->id && !$user->hasRole('admin')) {
+            //     return $this->sendError('Unauthorized access', [], 403);
+            // }
 
             $filePath = $media->file_path;
             $exists = Storage::disk('public')->exists($filePath);
@@ -110,31 +134,29 @@ class MediaController extends Controller
             if ($exists) {
                 $deleted = Storage::disk('public')->delete($filePath);
                 if (!$deleted) {
-                    return response()->json(['message' => 'File exists but could not be deleted'], 500);
+                    return $this->sendError('File exists but could not be deleted', [], 500);
                 }
             }
 
             $media->delete();
 
-            return response()->json([
-                'message' => 'File deleted successfully',
+            return $this->sendResponse([
                 'file_path' => $filePath,
                 'file_existed' => $exists
-            ], 200);
+            ], 'File deleted successfully');
 
         } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Media not found'], 404);
+            return $this->sendError('Media not found', [], 404);
         } catch (Exception $e) {
             \Log::error('File deletion failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'file_path' => $media->file_path ?? null,
             ]);
-        
-            return response()->json([
-                'message' => 'Failed to delete file',
-                'error' => $e->getMessage(),
-            ], 500);
+
+            return $this->sendError('Failed to delete file', ['error' => $e->getMessage()], 500);
         }
     }
+
+
 }
