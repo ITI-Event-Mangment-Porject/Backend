@@ -40,8 +40,7 @@ class JobProfile extends Model
     {
         return $this->hasMany(InterviewRequest::class);
     }
-
-    public function tracks()
+ public function tracks()
     {
         return $this->belongsToMany(
             Track::class,
@@ -51,4 +50,12 @@ class JobProfile extends Model
         );
     }
     
+    public function isEmpty()
+    {
+        return $this->positions_available <= 0;
+    }
+    public function isFull()
+    {
+        return $this->positions_available <= 0;
+    }
 }

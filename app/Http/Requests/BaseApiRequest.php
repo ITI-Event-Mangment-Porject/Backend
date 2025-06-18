@@ -17,4 +17,26 @@ class BaseApiRequest extends FormRequest
             'errors' => $validator->errors(),
         ], 422));
     }
+    public function authorize(): bool
+    {
+        return true; // Override this method in child classes to implement authorization logic
+    }
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return []; // Override this method in child classes to define validation rules
+    }
+    /**
+     * Get custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return []; // Override this method in child classes to define custom messages
+    }
 }

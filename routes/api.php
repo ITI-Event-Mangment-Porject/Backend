@@ -5,6 +5,7 @@ use App\Http\Controllers\API\Events\InterviewRequestController;
 use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
+use App\Http\Controllers\API\Events\LiveEventController;
 
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
@@ -22,10 +23,10 @@ use App\Http\Controllers\BulkMessageController;
 use App\Http\Controllers\FeedbackController;
 
 use App\Http\Controllers\Event\EventController;
+use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
-
-
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 /*
 |--------------------------------------------------------------------------
@@ -59,6 +60,13 @@ Route::prefix('test/tracks')->group(function () {
     Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
     Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
     Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
+});
+
+// Test routes for LiveEvent API endpoints (no authentication required for testing)
+Route::prefix('test/live')->group(function () {
+    Route::get('/events/{id}/status', [LiveEventController::class, 'status']);     // Get live status of an event
+    Route::post('/events/{id}/start', [LiveEventController::class, 'start']);      // Start a live event
+    Route::post('/events/{id}/end', [LiveEventController::class, 'end']);          // End a live event
 });
 
 // Public routes
@@ -115,25 +123,40 @@ Route::prefix('auth')->group(function () {
     |--------------------------------------------------------------------------
     |
     */
-    Route::prefix('events')->group(function () {
+    Route::middleware(['auth:api'])->prefix('events')->group(function () {
         Route::get('/', [EventController::class, 'index']); // List all events
-        Route::post('/', [EventController::class, 'store'])->middleware('role:admin');
-
+        Route::post('/', [EventController::class, 'store']);
+        
         // Specific routes FIRST (these need to come before the generic /{event_flexible})
         Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
         Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
-        Route::get('/{event_flexible}/banner', [EventController::class, 'banner']);
+        Route::get('/{event_flexible}/banner', [EventController::class, 'getBanner']);
+        Route::post('/{event_flexible}/banner', [EventController::class, 'uploadBanner']);
+        
+        
+        /* Event Sessions */
+        Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
+        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
+        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
+        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
 
-        // /* Event Sessions */
-        // Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
-        // Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
-        // Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
-        // Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+        // Live Event routes
+        Route::prefix('{event_flexible}/live')->group(function () {
+            Route::get('/status', [LiveEventController::class, 'status']);                      // Get live status (public/company)
+            Route::post('/start', [LiveEventController::class, 'start'])->middleware('role:admin');    // Start live event (admin only)
+            Route::post('/end', [LiveEventController::class, 'end'])->middleware('role:admin');        // End live event (admin only)
+        });
 
+        
+         /* Event Registration */
+        Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
+        Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
+        Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
+        
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
-        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
-        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+        Route::put('/{event_flexible}', [EventController::class, 'update']);
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware(RoleMiddleware::class.':admin');
     });
     /*
     |--------------------------------------------------------------------------
