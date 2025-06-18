@@ -3,8 +3,9 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;  // Add this import
 
-class UpdateEventRequest extends FormRequest
+class UpdateEventRequest extends BaseApiRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,7 +22,7 @@ class UpdateEventRequest extends FormRequest
      */
     public function rules(): array
     {
-        $eventId = $this->route('event')?->id ?? $this->route('event');
+        $eventId = $this->route('event_flexible')?->id ?? $this->route('event_flexible');
 
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],

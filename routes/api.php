@@ -19,10 +19,10 @@ use App\Http\Controllers\BulkMessageController;
 use App\Http\Controllers\FeedbackController;
 
 use App\Http\Controllers\Event\EventController;
+use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
-
-
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,15 +119,17 @@ Route::prefix('auth')->group(function () {
     |--------------------------------------------------------------------------
     |
     */
-    Route::prefix('events')->group(function () {
+    Route::middleware(['auth:api'])->prefix('events')->group(function () {
         Route::get('/', [EventController::class, 'index']); // List all events
-        Route::post('/', [EventController::class, 'store'])->middleware('role:admin');
-
+        Route::post('/', [EventController::class, 'store']);
+        
         // Specific routes FIRST (these need to come before the generic /{event_flexible})
         Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
         Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
-        Route::get('/{event_flexible}/banner', [EventController::class, 'banner']);
-
+        Route::get('/{event_flexible}/banner', [EventController::class, 'getBanner']);
+        Route::post('/{event_flexible}/banner', [EventController::class, 'uploadBanner']);
+        
+        
         /* Event Sessions */
         Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
         Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
@@ -141,10 +143,16 @@ Route::prefix('auth')->group(function () {
             Route::post('/end', [LiveEventController::class, 'end'])->middleware('role:admin');        // End live event (admin only)
         });
 
+        
+         /* Event Registration */
+        Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
+        Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
+        Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
+        
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
-        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
-        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+        Route::put('/{event_flexible}', [EventController::class, 'update']);
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware(RoleMiddleware::class.':admin');
     });
     /*
     |--------------------------------------------------------------------------
