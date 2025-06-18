@@ -10,6 +10,7 @@ class JobProfileTrack extends Model
 {
     //
     use HasFactory;
+    public $timestamps = false;
     protected $fillable = [
         'job_profile_id', 'track_id', 'preference_level'
     ];

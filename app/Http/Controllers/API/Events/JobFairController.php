@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\API\Events;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\Event\Event;
-use DB;
+use App\Http\Requests\Events\StoreJobFairRequest;
+use App\Http\Requests\Events\UpdateJobFairRequest;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
-class JobFairController extends Controller
+class JobFairController extends BaseApiController
 {
     public function index(Request $request)
     {
-        // Logic to retrieve and return a list of job fairs
         $query = Event::query()->where('type', 'Job Fair');
         if ($request->has('status')){
             $query->where('status', $request->input('status'));
@@ -24,115 +24,98 @@ class JobFairController extends Controller
             $query->where('end_date', '<=', $request->input('end_date'));
         }
         $jobFairs = $query->select('id','title','start_date','end_date','status','location')->get();
-        return response()->json($jobFairs);
+        return $this->sendResponse($jobFairs, 'Job fairs retrieved successfully.');
     }
 
-    public function show($id)
+    public function show($jobfairid)
     {
         $event = Event::with('visibilityTracks.track:id,name')
-            ->where('id', $id)
+            ->where('id', $jobfairid)
             ->where('type', 'Job Fair')
-            ->firstOrFail();
+            ->first();
+
+        if (!$event) {
+            return $this->sendError('Job Fair not found.');
+        }
 
         $response = $event->toArray();
         $response['tracks'] = $event->visibilityTracks->pluck('track.name');
 
-        return response()->json($response);
+        return $this->sendResponse($response, 'Job Fair retrieved successfully.');
     }
 
-
-    public function store(Request $request)
+    public function store(StoreJobFairRequest $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'banner_image' => 'nullable|string|max:500',
-            'registration_deadline' => 'nullable|date',
-            'visibility_type' => 'required|in:all,role_based,track_based',
-            'visibility_config' => 'nullable|array',
-            'slido_qr_code' => 'nullable|string|max:500',
-            'slido_embed_url' => 'nullable|string|max:500',
-        ]);
+        try {
+            $validated = $request->validated();
 
-        $event = Event::create([
-            ...$validated,
-            'slug' => Str::slug($validated['title']) . '-' . Str::random(5),
-            'type' => 'Job Fair',
-            'status' => 'draft', 
-            'created_by' => 1 // Assuming the creator ID is 1 for now, you can replace it with the authenticated user's ID later
-        ]);
+            $event = Event::create([
+                ...$validated,
+                'slug' => Str::slug($validated['title']) . '-' . Str::random(5),
+                'type' => 'Job Fair',
+                'status' => 'draft',
+                'created_by' => $validated['created_by'] ?? auth()->id() ?? 1
+            ]);
 
-
-        return response()->json([
-            'message' => 'Job Fair created in draft status.',
-            'data' => $event,
-        ], 201);
+            return $this->sendResponse($event, 'Job Fair created in draft status.', 201);
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to create Job Fair.', [$e->getMessage()], 500);
+        }
     }
 
-
-
-    public function update(Request $request, $id)
+    public function update(UpdateJobFairRequest $request, $jobfairid)
     {
-        $event = Event::where('type', 'Job Fair')->findOrFail($id);
+        $event = Event::where('type', 'Job Fair')->find($jobfairid);
 
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'location' => 'nullable|string|max:255',
-            'start_date' => 'sometimes|date',
-            'end_date' => 'sometimes|date|after_or_equal:start_date',
-            'start_time' => 'sometimes|date_format:H:i',
-            'end_time' => 'sometimes|date_format:H:i|after:start_time',
-            'banner_image' => 'nullable|string|max:500',
-            'registration_deadline' => 'nullable|date',
-            'visibility_type' => 'sometimes|in:all,role_based,track_based',
-            'visibility_config' => 'nullable|array',
-            'slido_qr_code' => 'nullable|string|max:500',
-            'slido_embed_url' => 'nullable|string|max:500',
-            'status' => 'sometimes|in:draft,published,ongoing,completed,archived',
-        ]);
-
-        // If title updated, regenerate slug
-        if (isset($validated['title'])) {
-            $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(5);
+        if (!$event) {
+            return $this->sendError('Job Fair not found.');
         }
 
-        $event->update($validated);
+        try {
+            $validated = $request->validated();
 
-        return response()->json([
-            'message' => 'Job Fair updated successfully.',
-            'data' => $event,
-        ]);
+            if (isset($validated['title'])) {
+                $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(5);
+            }
+
+            $event->update($validated);
+
+            return $this->sendResponse($event, 'Job Fair updated successfully.');
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to update Job Fair.', [$e->getMessage()], 500);
+        }
     }
 
-
-    public function destroy($id)
+    public function destroy($jobfairid)
     {
-        $event = Event::where('type', 'Job Fair')->findOrFail($id);
+        $event = Event::where('type', 'Job Fair')->find($jobfairid);
 
-        $event->update([
-            'archived_at' => now(),
-            'status' => 'archived',
-        ]);
+        if (!$event) {
+            return $this->sendError('Job Fair not found.');
+        }
 
-        return response()->json([
-            'message' => 'Job Fair archived successfully.',
-        ]);
+        try {
+            $event->update([
+                'archived_at' => now(),
+                'status' => 'archived',
+            ]);
+
+            return $this->sendResponse(null, 'Job Fair archived successfully.');
+        } catch (\Exception $e) {
+            return $this->sendError('Failed to archive Job Fair.', [$e->getMessage()], 500);
+        }
     }
 
-
-    public function Companies($id)
+    public function Companies($jobfairid)
     {
-        // Logic to retrieve companies associated with a specific job fair
         $event = Event::with(['jobFairParticipations.company:id,name'])
-            ->where('id', $id)
+            ->where('id', $jobfairid)
             ->where('type', 'Job Fair')
-            ->firstOrFail();
+            ->first();
+
+        if (!$event) {
+            return $this->sendError('Job Fair not found.');
+        }
 
         $companies = $event->jobFairParticipations->map(function ($p) {
             return [
@@ -142,28 +125,32 @@ class JobFairController extends Controller
             ];
         });
 
-        return response()->json($companies);
+        return $this->sendResponse($companies, 'Companies retrieved successfully.');
     }
 
-public function statistics($id)
-{
-    $event = Event::where('id', $id)->where('type', 'Job Fair')->firstOrFail();
-    // Get participating companies with their names
-    $companies = $event->jobFairParticipations()
-        ->with('company:id,name')
-        ->get()
-        ->pluck('company.name')
-        ->unique()
-        ->values()
-        ->toArray();
+    public function statistics($jobfairid)
+    {
+        $event = Event::where('id', $jobfairid)->where('type', 'Job Fair')->first();
 
-    $stats = [
-        'total_participations' => $event->jobFairParticipations()->count(),
-        'total_job_profiles' => $event->jobFairParticipations()->withCount('jobProfiles')->get()->sum('job_profiles_count'),
-        'total_interviews' => $event->interviewRequests()->count(),
-        'participating_companies' => $companies,
-    ];
+        if (!$event) {
+            return $this->sendError('Job Fair not found.');
+        }
 
-    return response()->json($stats);
-}
+        $companies = $event->jobFairParticipations()
+            ->with('company:id,name')
+            ->get()
+            ->pluck('company.name')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $stats = [
+            'total_participations' => $event->jobFairParticipations()->count(),
+            'total_job_profiles' => $event->jobFairParticipations()->withCount('jobProfiles')->get()->sum('job_profiles_count'),
+            'total_interviews' => $event->interviewRequests()->count(),
+            'participating_companies' => $companies,
+        ];
+
+        return $this->sendResponse($stats, 'Statistics retrieved successfully.');
+    }
 }
