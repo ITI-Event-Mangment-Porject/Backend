@@ -22,6 +22,10 @@ use Firebase\JWT\BeforeValidException;
 use DomainException;
 use InvalidArgumentException;
 use UnexpectedValueException;
+use Illuminate\Support\Facades\Log;
+
+
+// use Illuminate\Support\Facades\Http;
 /**
  * Class AuthController
  * Handles user authentication, login, logout, token refresh, and profile retrieval.
@@ -47,12 +51,40 @@ class AuthController extends BaseApiController
     {
         $validated = $request->validated(); 
         
-        $email = $request->input('email');
-        $password = $request->input('password');
+        $email = $validated['email'];
+        $password = $validated['password'];
         
         try {
             // Send credentials to Portal system
-            $portalResponse = $this->authenticateWithPortal($email, $password);
+            // $portalResponse = $this->authenticateWithPortal($email, $password);
+            
+            $portalResponse = [
+                'success' => true,
+                
+                'data' => [
+                    'token' => 'mocked_token',
+                    'user' => [
+                            'id' => 'PU48493',
+                            'role' => 'student',
+                            'email' => $email,
+                            'first_name' => 'Ahmed',
+                            'last_name' => 'Elgendy',
+                            'cv_path' => 'cv.pdf',
+                            'phone' => '01012345678',
+                            'track_id' => 1,
+                            'intake_year' => 2023,
+                            'graduation_year' => 2024,
+                            'bio' => 'Sample Bio',
+                            'linkedin_url' => 'https://linkedin.com/in/ahmed',
+                            'github_url' => 'https://github.com/ahmed',
+                            'portfolio_url' => 'https://ahmed.com',
+                            'profile_image' => 'profile.jpg',
+                        ],
+                            
+                    ],
+                'message' => 'Authenticated successfully',
+                ];
+            
             
             if (!$portalResponse['success']) {
                 return $this->sendError($portalResponse['message'], [], 401);
@@ -60,7 +92,7 @@ class AuthController extends BaseApiController
             
             $portalData = $portalResponse['data'];
             $portalToken = $portalData['token'];
-            $userData = $portalData['data'];
+            $userData = $portalData['user'];
             
             // Validate required fields from portal response
             if (!isset($userData['id'], $userData['role'], $userData['first_name'], $userData['last_name'], $userData['email'])) {
@@ -145,11 +177,13 @@ class AuthController extends BaseApiController
                 'profile_complete' => $profileComplete
             ], 'Login successful');
             
-        } catch (ConnectException $e) {
+        }
+         catch (ConnectException $e) {
             return $this->sendError('Unable to connect to authentication server', [], 503);
         } catch (RequestException $e) {
             return $this->sendError('Authentication failed', [], 401);
-        } catch (ExpiredException $e) {
+        } 
+        catch (ExpiredException $e) {
             return $this->sendError('Token expired', [$e->getMessage()], 401);
         } catch (SignatureInvalidException $e) {
             return $this->sendError('Invalid token signature', [$e->getMessage()], 401);
@@ -157,8 +191,14 @@ class AuthController extends BaseApiController
             return $this->sendError('Token could not be processed', [$e->getMessage()], 400);
         }catch (InvalidArgumentException | BeforeValidException $e) {
             return $this->sendError('Token is not valid yet', [$e->getMessage()], 400);
-        } catch (\Exception $e) {
-            \Log::error('Login error: ' . $e->getMessage());
+        }
+        catch (JWTException $e) {
+            // This happens when token is not sent at all
+            return $this->sendError('Unauthorized', ['error' => 'Token is missing or not provided'], 401);
+    
+        }
+         catch (\Exception $e) {
+            Log::error('Login error: ' . $e->getMessage());
             return $this->sendError('Login failed', [], 500);
         }
     }
@@ -199,10 +239,54 @@ class AuthController extends BaseApiController
         catch (ConnectException $e) {
             return $this->sendError('Unable to connect to authentication server', [], 503);
         } catch (\Exception $e) {
-            \Log::error('Portal authentication error: ' . $e->getMessage());
+            Log::error('Portal authentication error: ' . $e->getMessage());
             return $this->sendError('Authentication failed', [], 500);
         }
     }
+    
+    
+    // private function authenticateWithPortal($email, $password)
+    // {
+    //     try {
+    //         $response = Http::withHeaders([
+    //             'Content-Type' => 'application/json',
+    //             'Accept' => 'application/json',
+    //             'X-API-Key' => env('PORTAL_API_KEY'),
+    //         ])->post(env('PORTAL_API_URL') . '/api/auth/login', [
+    //             'email' => $email,
+    //             'password' => $password,
+    //         ]);
+        
+    //         if ($response->successful()) {
+    //             $body = $response->json();
+            
+    //             if (isset($body['token'], $body['data'])) {
+    //                 return [
+    //                     'success' => true,
+    //                     'data' => $body,
+    //                     'message' => 'Authenticated successfully',
+    //                 ];
+    //             }
+            
+    //             return [
+    //                 'success' => false,
+    //                 'message' => $body['message'] ?? 'Invalid portal response',
+    //             ];
+    //         }
+        
+    //         return [
+    //             'success' => false,
+    //             'message' => $response->json()['message'] ?? 'Authentication failed',
+    //         ];
+        
+    //     } catch (\Exception $e) {
+    //         Log::error('Portal authentication error: ' . $e->getMessage());
+    //         return [
+    //             'success' => false,
+    //             'message' => 'Connection to portal failed: ' . $e->getMessage(),
+    //         ];
+    //     }
+    // }
     
     private function checkProfileComplete($user)
     {

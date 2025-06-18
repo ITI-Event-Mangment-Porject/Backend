@@ -17,6 +17,8 @@ use Tymon\JWTAuth\Http\Middleware\AuthenticateAndRenewInRequest as JwtAuthentica
 use Tymon\JWTAuth\Http\Middleware\AuthenticateWithBasicAuthInRequest as JwtAuthenticateWithBasicAuthInRequest;
 use Tymon\JWTAuth\Http\Middleware\AuthenticateWithBearerToken as JwtAuthenticateWithBearerToken;
 use Tymon\JWTAuth\Http\Middleware\CheckForBearerToken as JwtCheckForBearerToken;
+use Spatie\Permission\Middlewares\RoleMiddleware;
+use Spatie\Permission\Middlewares\PermissionMiddleware;
 
 class Kernel extends HttpKernel
 {
@@ -62,11 +64,14 @@ class Kernel extends HttpKernel
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        // 'redirect.to.portal' => \App\Http\Middleware\RedirectIfUnauthenticatedToPortal::class,
-        'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
-
         
+        // Spatie Permission Middleware - UNCOMMENTED
+        'role' => \Spatie\laravel-permission\src\Middlewares\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
+                
+        // JWT Middleware
+        'jwt.auth' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+        'jwt.refresh' => \Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
     ];
 }
