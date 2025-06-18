@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamp('checked_in_at')->nullable();
             $table->foreignId('checked_in_by')->nullable()->constrained('users')->onDelete('set null');
             $table->enum('check_in_method', ['qr', 'manual'])->nullable();
-            
+            $table->softDeletes(); // For soft delete functionality
             $table->unique(['event_id', 'user_id'], 'unique_event_registration');
             $table->index('status');
             $table->index('registered_at');

@@ -6,11 +6,12 @@ use App\Models\Event\Event;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EventRegistration extends Model
 {
     //
-    use HasFactory;
+    use HasFactory ,SoftDeletes;
     protected $fillable = [
         'event_id', 'user_id', 'status', 'registration_type',
         'registered_at', 'cancelled_at', 'cancellation_reason',
@@ -51,5 +52,17 @@ class EventRegistration extends Model
     public function isCheckedIn()
     {
         return !is_null($this->checked_in_at);
+    }
+    public function isCancelled()
+    {
+        return $this->status === 'cancelled';
+    }
+    public function isRegistered()
+    {
+        return $this->status === 'registered';
+    }
+    public function isNoShow()
+    {
+        return $this->status === 'no_show';
     }
 }

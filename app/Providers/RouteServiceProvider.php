@@ -4,9 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
-use App\Models\Event; // Import the Event model for custom route binding
-use Illuminate\Http\Request;
-use App\Http\Controllers\Event\EventController;
+use App\Models\Event\Event; // Import the Event model for custom route binding
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -15,7 +13,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        
+        if (request()->is('api/*')) {
+            request()->headers->set('Accept', 'application/json');
+        }
         
         $this->routes(function () {
             Route::middleware('api')
@@ -27,11 +27,7 @@ class RouteServiceProvider extends ServiceProvider
         });
         
         // Custom route model binding
-    Route::bind('event_flexible', function ($value) {
-        return is_numeric($value)
-            ? Event::findOrFail($value)
-            : Event::where('slug', $value)->firstOrFail();
-    });
+    
 
         
     }

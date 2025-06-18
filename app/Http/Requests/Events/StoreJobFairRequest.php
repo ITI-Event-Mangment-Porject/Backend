@@ -1,44 +1,30 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Events;
 
-use Illuminate\Foundation\Http\FormRequest;
 use App\Http\Requests\BaseApiRequest;
-use Illuminate\Validation\Rule; 
-use Illuminate\Support\Str;  
+use Illuminate\Validation\Rule;
 
-
-class StoreEventRequest extends BaseApiRequest
+class StoreJobFairRequest extends BaseApiRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            //
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
                 'required',
                 'string',
                 'max:255',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                Rule::unique('events', 'slug')->ignore(
-                    optional($this->route('event_flexible'))->id
-                )
+                Rule::unique('events', 'slug')
             ],
             'description' => ['nullable', 'string'],
-            'type' => ['required', Rule::in(['Job Fair', 'Tech', 'Fun'])],
+            'type' => ['required', Rule::in(['Job Fair'])],
             'status' => ['sometimes', Rule::in(['draft', 'published', 'ongoing', 'completed', 'archived'])],
             'location' => ['nullable', 'string', 'max:255'],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
@@ -52,19 +38,15 @@ class StoreEventRequest extends BaseApiRequest
                 'before_or_equal:start_date',
                 'after_or_equal:now'
             ],
-            'visibility_type' => ['sometimes', Rule::in(['all', 'role_based', 'track_based'])],
-            'visibility_config' => ['nullable', 'json'],
+            'visibility_type' => ['required', Rule::in(['all', 'role_based', 'track_based'])],
+            'visibility_config' => ['nullable', 'array'],
             'slido_qr_code' => ['nullable', 'string', 'max:500', 'url'],
             'slido_embed_url' => ['nullable', 'string', 'max:500', 'url'],
-            'created_by' => ['required', 'exists:users,id'],
+            'created_by' => ['nullable', 'exists:users,id'],
             'archived_at' => ['nullable', 'date'],
         ];
     }
-    /**
-     * Get custom messages for validator errors.
-     *
-     * @return array<string, string>
-     */
+
     public function messages(): array
     {
         return [
@@ -90,11 +72,7 @@ class StoreEventRequest extends BaseApiRequest
             'created_by.exists' => 'The selected creator does not exist.',
         ];
     }
-    
-    /**
-     * Get custom attributes for validator errors.
-     */
-    
+
     public function attributes(): array
     {
         return [
@@ -112,17 +90,11 @@ class StoreEventRequest extends BaseApiRequest
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     */
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
             // Custom validation for same-day events
-            if (
-                $this->get('start_date') === $this->get('end_date') &&
-                $this->get('start_time') >= $this->get('end_time')
-            ) {
+            if ($this->start_date === $this->end_date && $this->start_time >= $this->end_time) {
                 $validator->errors()->add('end_time', 'For same-day events, end time must be after start time.');
             }
 
@@ -130,26 +102,15 @@ class StoreEventRequest extends BaseApiRequest
             if ($this->visibility_type !== 'all' && empty($this->visibility_config)) {
                 $validator->errors()->add('visibility_config', 'Visibility configuration is required when visibility type is not "all".');
             }
-
-            // Validate JSON structure for visibility_config
-            if ($this->visibility_config) {
-                $config = json_decode($this->visibility_config, true);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    $validator->errors()->add('visibility_config', 'Visibility configuration must be valid JSON.');
-                }
-            }
         });
     }
 
-    /**
-     * Prepare the data for validation.
-     */
     protected function prepareForValidation(): void
     {
         // Auto-generate slug from title if not provided
         if (!$this->has('slug') && $this->has('title')) {
             $this->merge([
-                'slug' => Str::slug($this->title)
+                'slug' => \Str::slug($this->title)
             ]);
         }
 
@@ -157,7 +118,8 @@ class StoreEventRequest extends BaseApiRequest
         $this->merge([
             'status' => $this->status ?? 'draft',
             'visibility_type' => $this->visibility_type ?? 'all',
-            'created_by' => $this->created_by ?? auth()->id(),
+            'created_by' => $this->created_by ?? auth()->id() ?? 1,
+            'type' => 'Job Fair',
         ]);
     }
 }
