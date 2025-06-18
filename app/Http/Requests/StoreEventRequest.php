@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule; 
+use Illuminate\Support\Str;  
+
 
 class StoreEventRequest extends BaseApiRequest
 {
@@ -31,7 +33,9 @@ class StoreEventRequest extends BaseApiRequest
                 'string',
                 'max:255',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                Rule::unique('events', 'slug')->ignore($this->route('event'))
+                Rule::unique('events', 'slug')->ignore(
+                    optional($this->route('event_flexible'))->id
+                )
             ],
             'description' => ['nullable', 'string'],
             'type' => ['required', Rule::in(['Job Fair', 'Tech', 'Fun'])],
@@ -115,7 +119,10 @@ class StoreEventRequest extends BaseApiRequest
     {
         $validator->after(function ($validator) {
             // Custom validation for same-day events
-            if ($this->start_date === $this->end_date && $this->start_time >= $this->end_time) {
+            if (
+                $this->get('start_date') === $this->get('end_date') &&
+                $this->get('start_time') >= $this->get('end_time')
+            ) {
                 $validator->errors()->add('end_time', 'For same-day events, end time must be after start time.');
             }
 
@@ -142,7 +149,7 @@ class StoreEventRequest extends BaseApiRequest
         // Auto-generate slug from title if not provided
         if (!$this->has('slug') && $this->has('title')) {
             $this->merge([
-                'slug' => \Str::slug($this->title)
+                'slug' => Str::slug($this->title)
             ]);
         }
 
