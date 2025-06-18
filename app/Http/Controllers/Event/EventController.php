@@ -24,7 +24,10 @@ class EventController extends BaseApiController
     public function index(Request $request)
     {
         try {
-            $events = QueryBuilder::for(Event::class)
+            $perPage = (int) $request->get('per_page', 6);
+            $page = (int) $request->get('page', 1);
+
+            $eventsQuery = QueryBuilder::for(Event::class)
                 ->allowedFilters([
                     AllowedFilter::exact('status'),
                     AllowedFilter::exact('type'),
@@ -53,8 +56,9 @@ class EventController extends BaseApiController
                     'registrations',
                     'staffAssignments',
                 ])
-                ->with(['creator:id,first_name,last_name'])
-                ->paginate($request->get('per_page', 15));
+                ->with(['creator:id,first_name,last_name']);
+
+            $events = $eventsQuery->paginate($perPage, ['*'], 'page', $page);
 
             if ($events->count() === 0) {
                 return $this->sendError('No events found', [], 404);

@@ -99,18 +99,31 @@ class EventRegistrationController extends BaseApiController
             );
         }
     }
-    public function registrations(Event $event_flexible)
+    public function registrations(Request $request, Event $event_flexible)
     {
-        // Logic to get all registrations for an event
+        // Check if the event exists
+        if (!$event_flexible) {
+            return $this->sendError('Event not found.', [], 404);
+        }
+        // Check if the user is authorized to view registrations
+        if (!auth()->user()->can('view', $event_flexible)) {
+            return $this->sendError('Unauthorized to view registrations for this event.', [], 403);
+        }
+
+        // Get pagination parameters
+        $perPage = (int) ($request->input('per_page', 6));
+        $page = (int) ($request->input('page', 1));
+
+        // Logic to get paginated registrations for an event
         $registrations = $event_flexible->registrations()
             ->with(['user', 'event'])
-            ->get();
+            ->paginate($perPage, ['*'], 'page', $page);
 
         if ($registrations->isEmpty()) {
             return $this->sendError('No registrations found for this event.', [], 404);
         }
 
-        return $this->sendResponse($registrations, 'Registrations retrieved successfully',200);
+        return $this->sendResponse($registrations, 'Registrations retrieved successfully', 200);
     }
     /**
      * Cancel a user's registration for an event
