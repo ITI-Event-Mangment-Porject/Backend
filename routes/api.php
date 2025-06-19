@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Events\BrandingDayController;
+use App\Http\Controllers\API\Events\InterviewQueueController;
 use App\Http\Controllers\API\Events\InterviewRequestController;
 use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
@@ -253,6 +254,13 @@ Route::prefix('job-fairs')->group(function(){
     Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store']);
     Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update']);
     Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy']);
+
+    Route::get('{jobFairId}/queues/slot/{slotId}', [InterviewQueueController::class, 'slotQueue']);
+    Route::get('{jobFairId}/queues/company/{companyId}', [InterviewQueueController::class, 'companyQueues']);
+    Route::get('{jobFairId}/queues/student/{studentId}', [InterviewQueueController::class, 'studentQueues']);
+    Route::get('{jobFairId}/queues/', [InterviewQueueController::class, 'jobFairQueues']);
+    Route::put('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'updateQueue']);
+    Route::delete('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'removeFromQueue']);
 
 });
 
