@@ -296,7 +296,7 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 
 
 // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
+Route::prefix('bulk-messages')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::post('/', [BulkMessageController::class, 'store']);
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);

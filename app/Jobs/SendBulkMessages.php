@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Notifications_and_Messaging\BulkMessage;
+use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Models\Auth\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

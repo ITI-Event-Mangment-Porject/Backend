@@ -3,7 +3,8 @@
 namespace App\Policies;
 
 use App\Models\Auth\User;
-use App\Models\Notifications_and_Messaging\BulkMessage;
+use App\Models\NotificationsAndMessaging\BulkMessage;
+
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BulkMessagePolicy
@@ -24,4 +25,10 @@ class BulkMessagePolicy
     {
         return $user->hasRole('admin') && $user->id === $message->sent_by;
     }
+
+    public function view(User $user, BulkMessage $message)
+{
+    return $user->hasRole('admin');
+}
+
 }
