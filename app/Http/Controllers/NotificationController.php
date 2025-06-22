@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\NotificationsAndMessaging\Notification;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -71,5 +70,37 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'All notifications marked as read'
         ]);
+    }
+
+    /**
+     * Admin sends a notification to any user
+     * POST /notifications/admin-send
+     */
+    public function storeByAdmin(Request $request)
+    {
+        $data = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'title' => 'required|string|max:255',
+            'message' => 'required|string',
+            'type' => 'nullable|string',
+            'related_id' => 'nullable|integer',
+            'related_type' => 'nullable|string',
+        ]);
+
+        $notification = Notification::create([
+            'user_id' => $data['user_id'],
+            'title' => $data['title'],
+            'message' => $data['message'],
+            'type' => $data['type'] ?? null,
+            'related_id' => $data['related_id'] ?? null,
+            'related_type' => $data['related_type'] ?? null,
+            'is_read' => false,
+            'sent_via' => json_encode(['in-app']),
+        ]);
+
+        return response()->json([
+            'message' => 'Notification sent successfully by admin.',
+            'notification' => $notification,
+        ], 201);
     }
 }

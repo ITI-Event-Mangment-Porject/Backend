@@ -265,35 +265,37 @@ Route::prefix('job-fairs')->group(function(){
 });
 
 // Feedback Routes
-Route::prefix('feedback')->middleware(['auth:sanctum'])->group(function () {
+Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
 
     // Get feedback forms for an event (all users)
     Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
     // Create feedback form (admin only)
-    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
+    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
     // Submit feedback response (students)
     Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
     // Get feedback responses (admin only)
-    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
+    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware(RoleMiddleware::class.':admin');;
     // Toggle form status (admin only)
-    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
+    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
 });
 
 
-
-// Notifications Routes 
-Route::prefix('notifications')->middleware('auth:sanctum')->group(function () {
+// notification 
+Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin']) ;
 });
+
+
 
 
 
 
 // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::post('/', [BulkMessageController::class, 'store']);
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);
