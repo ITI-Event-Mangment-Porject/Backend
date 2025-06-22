@@ -93,20 +93,11 @@ class JobFairSeeder extends Seeder
                         'reviewed_at' => now()->subDays(rand(1, 10)),
                     ]);
 
-                    // Create interview queue entry for approved requests
-                    if ($request->status === 'approved') {
-                        InterviewQueue::factory()->create([
-                            'interview_request_id' => $request->id,
-                            'company_id' => $company->id,
-                            'user_id' => $student->id,
-                            'queue_position' => rand(1, 15),
-                            'status' => fake()->randomElement(['waiting', 'completed', 'in_interview']),
-                        ]);
-                    }
+                    // InterviewQueue entries will be created by the automated job/command, not here.
                 }
             }
 
-                    // Create some pending participations
+            // Create some pending participations
             foreach ($companies->random(3) as $company) {
                 JobFairParticipation::updateOrCreate(
                     [
