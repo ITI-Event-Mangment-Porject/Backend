@@ -286,7 +286,8 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin']) ;
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
+        ;
 });
 
 
