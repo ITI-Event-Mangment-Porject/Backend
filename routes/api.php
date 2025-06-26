@@ -28,6 +28,7 @@ use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
 use Spatie\Permission\Middleware\RoleMiddleware;
+use App\Http\Controllers\AnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -301,4 +302,11 @@ Route::prefix('bulk-messages')->middleware(['auth:api', RoleMiddleware::class . 
     Route::post('/', [BulkMessageController::class, 'store']);
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);
     Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+});
+
+
+Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+    Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
+    Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
+    Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
 });
