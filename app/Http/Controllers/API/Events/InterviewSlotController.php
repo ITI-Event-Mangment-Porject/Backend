@@ -11,6 +11,7 @@ use App\Http\Requests\Events\UpdateInterviewSlotRequest;
 
 class InterviewSlotController extends BaseApiController
 {
+    // Admin only: List all slots for a job fair
     public function jobFairSlots($jobFairId)
     {
         $event = Event::where('id', $jobFairId)
@@ -35,6 +36,7 @@ class InterviewSlotController extends BaseApiController
         ], 'Interview slots retrieved successfully.');
     }
 
+    // Admin, staff, or company rep (ownership checked below): List slots for a participation
     public function participationSlots($jobFairId, $participationId)
     {
         $participation = JobFairParticipation::where('id', $participationId)
@@ -43,6 +45,12 @@ class InterviewSlotController extends BaseApiController
 
         if (!$participation) {
             return $this->sendError('Participation not found for this job fair.', [], 404);
+        }
+
+        $user = auth()->user();
+        // Company rep can only view their own participation's slots
+        if ($user->hasRole('company_representative') && $participation->submitted_by !== $user->id) {
+            return $this->sendError('You are not authorized to view slots for this participation.', [], 403);
         }
 
         $slots = InterviewSlot::where('participation_id', $participationId)
@@ -57,6 +65,7 @@ class InterviewSlotController extends BaseApiController
         ], 'Interview slots retrieved successfully.');
     }
 
+    // Company rep (ownership checked): Create a slot
     public function store(StoreInterviewSlotRequest $request, $jobFairId, $participationId)
     {
         $validated = $request->validated();
@@ -67,6 +76,11 @@ class InterviewSlotController extends BaseApiController
 
         if (!$participation) {
             return $this->sendError('Participation not found for this job fair.', [], 404);
+        }
+
+        $user = auth()->user();
+        if ($user->hasRole('company_representative') && $participation->submitted_by !== $user->id) {
+            return $this->sendError('You are not authorized to manage slots for this participation.', [], 403);
         }
 
         try {
@@ -92,6 +106,7 @@ class InterviewSlotController extends BaseApiController
         }
     }
 
+    // Admin, staff, or company rep (ownership checked): Show a slot
     public function show($jobFairId, $participationId, $slotId)
     {
         $slot = InterviewSlot::with('participation.company')
@@ -103,9 +118,14 @@ class InterviewSlotController extends BaseApiController
             return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        // Optional: check jobFairId matches
         if ($slot->participation->event_id != $jobFairId) {
             return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
+
+        $user = auth()->user();
+        // Company rep can only view their own participation's slots
+        if ($user->hasRole('company_representative') && $slot->participation->submitted_by !== $user->id) {
+            return $this->sendError('You are not authorized to view this slot.', [], 403);
         }
 
         return $this->sendResponse(
@@ -114,6 +134,7 @@ class InterviewSlotController extends BaseApiController
         );
     }
 
+    // Company rep (ownership checked): Update a slot
     public function update(UpdateInterviewSlotRequest $request, $jobFairId, $participationId, $slotId)
     {
         $validated = $request->validated();
@@ -126,9 +147,13 @@ class InterviewSlotController extends BaseApiController
             return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        // Optional: check jobFairId matches
         if ($slot->participation->event_id != $jobFairId) {
             return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
+
+        $user = auth()->user();
+        if ($user->hasRole('company_representative') && $slot->participation->submitted_by !== $user->id) {
+            return $this->sendError('You are not authorized to update this slot.', [], 403);
         }
 
         try {
@@ -143,6 +168,7 @@ class InterviewSlotController extends BaseApiController
         }
     }
 
+    // Company rep (ownership checked): Delete a slot
     public function destroy($jobFairId, $participationId, $slotId)
     {
         $slot = InterviewSlot::where('id', $slotId)
@@ -153,9 +179,13 @@ class InterviewSlotController extends BaseApiController
             return $this->sendError('Interview slot not found for this participation.', [], 404);
         }
 
-        // Optional: check jobFairId matches
         if ($slot->participation->event_id != $jobFairId) {
             return $this->sendError('Interview slot does not belong to this job fair.', [], 403);
+        }
+
+        $user = auth()->user();
+        if ($user->hasRole('company_representative') && $slot->participation->submitted_by !== $user->id) {
+            return $this->sendError('You are not authorized to delete this slot.', [], 403);
         }
 
         try {

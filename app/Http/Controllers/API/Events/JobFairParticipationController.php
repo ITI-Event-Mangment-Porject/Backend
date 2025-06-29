@@ -22,7 +22,7 @@ class JobFairParticipationController extends BaseApiController
         $companyData = $request->input('company');
 
         try {
-            $participation = DB::transaction(function () use ($jobFairId, $companyData, $request) {
+            $participation = \DB::transaction(function () use ($jobFairId, $companyData, $request) {
                 // Create or get company
                 $company = Company::firstOrCreate(
                     ['contact_email' => $companyData['contact_email']],
@@ -35,7 +35,6 @@ class JobFairParticipationController extends BaseApiController
                     ->first();
 
                 if ($existing) {
-                    // Return error response from inside transaction
                     throw new \Exception('duplicate');
                 }
 
@@ -45,20 +44,11 @@ class JobFairParticipationController extends BaseApiController
                     'company_id' => $company->id,
                     'status' => 'pending',
                     'special_requirements' => $request->input('special_requirements'),
-                    'submitted_by' => 3, // Replace later with authenticated user
+                    'submitted_by' => auth()->id(),
                     'submitted_at' => now(),
                     'need_branding' => $request->input('need_branding', false),
                 ]);
             });
-
-            if ($participation === null) {
-                // This means duplicate was found
-                return $this->sendError(
-                    'This company has already submitted participation for this job fair.',
-                    [],
-                    409
-                );
-            }
 
             return $this->sendResponse($participation, 'Participation submitted successfully.', 201);
         } catch (\Exception $e) {
@@ -83,7 +73,7 @@ class JobFairParticipationController extends BaseApiController
             $participation->update([
                 'status' => $validated['status'],
                 'review_notes' => $validated['review_notes'] ?? null,
-                'reviewed_by' => 5, // Replace with actual user ID after authentication
+                'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
             ]);
 
@@ -91,7 +81,7 @@ class JobFairParticipationController extends BaseApiController
             if ($validated['status'] === 'approved') {
                 $participation->company->update([
                     'is_approved' => true,
-                    'approved_by' => 3, // Replace with actual user ID after authentication
+                    'approved_by' => auth()->id(),
                     'approved_at' => now(),
                 ]);
 
@@ -145,6 +135,13 @@ class JobFairParticipationController extends BaseApiController
             $participation = JobFairParticipation::where('event_id', $jobFairId)
                 ->with('company', 'submittedBy', 'reviewedBy')
                 ->findOrFail($participationId);
+
+            $user = auth()->user();
+
+            // If the user is a company representative, only allow access to their own participation
+            if ($user->hasRole('company_representative') && $participation->submitted_by !== $user->id) {
+                return $this->sendError('You are not authorized to view this participation.', [], 403);
+            }
 
             return $this->sendResponse($participation, 'Participation retrieved successfully.');
         } catch (ModelNotFoundException $e) {
