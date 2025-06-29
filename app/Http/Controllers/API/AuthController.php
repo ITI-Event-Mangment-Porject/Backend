@@ -64,11 +64,11 @@ class AuthController extends BaseApiController
                 'data' => [
                     'token' => 'mocked_token',
                     'user' => [
-                            'id' => 'PU48493',
-                            'role' => 'student',
+                            'id' => 'PU48494',
+                            'role' => 'admin',
                             'email' => $email,
-                            'first_name' => 'Ahmed',
-                            'last_name' => 'Elgendy',
+                            'first_name' => 'admin',
+                            'last_name' => 'admin',
                             'cv_path' => 'cv.pdf',
                             'phone' => '01012345678',
                             'track_id' => 1,

@@ -29,6 +29,7 @@ use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
+use App\Http\Controllers\AnalyticsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -240,30 +241,46 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
     // Get feedback forms for an event (all users)
     Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
     // Create feedback form (admin only)
-    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
+    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
     // Submit feedback response (students)
     Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
     // Get feedback responses (admin only)
-    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
+    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware(RoleMiddleware::class.':admin');;
     // Toggle form status (admin only)
-    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
+    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
 });
 
 
+
 // Notifications Routes 
+
 Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
+        ;
 });
 
 
 
+
+
+
 // Bulk Messages Routes 
+
 Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
+
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::post('/', [BulkMessageController::class, 'store']);
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);
     Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+});
+
+
+Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+    Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
+    Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
+    Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
 });

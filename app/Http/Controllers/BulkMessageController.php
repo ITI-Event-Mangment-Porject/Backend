@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 
 use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Http\Controllers\Controller;
@@ -9,7 +11,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class BulkMessageController extends Controller
+
 {
+    use AuthorizesRequests;
+
     /**
      * List all bulk messages (Admin only)
      * GET /bulk-messages
