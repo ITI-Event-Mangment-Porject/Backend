@@ -209,6 +209,37 @@ class EventController extends BaseApiController
             return $this->sendError('Server Error: ' . $e->getMessage(), [], 500);
         }
     }
+    public function unpublish(Event $event_flexible)
+    {
+        try {
+            if ($event_flexible->status === 'draft') {
+                return $this->sendError('Event is already still unpublished', [], 400);
+            }
+            if ($event_flexible->status === 'archived') {
+                return $this->sendError('Event is archived can\'t be unpublished', [], 400);
+            }
+            if (in_array($event_flexible->status, ['ongoing', 'completed'])) {
+                return $this->sendError('Cannot unpublish an ongoing or completed event', [], 400);
+            }
+
+            $event_flexible->status = 'draft';
+            $saved = $event_flexible->save();
+
+            if (!$saved) {
+                return $this->sendError('Failed to unpublish event', [], 500);
+            }
+
+            return $this->sendResponse($event_flexible, 'Event returned to draft status successfully');
+        } catch (TokenExpiredException $e) {
+            return $this->sendError('Token has expired', [], 401);
+        } catch (TokenInvalidException $e) {
+            return $this->sendError('Token is invalid', [], 401);
+        } catch (JWTException $e) {
+            return $this->sendError('Token is missing or not provided', [], 401);
+        } catch (\Exception $e) {
+            return $this->sendError('Server Error: ' . $e->getMessage(), [], 500);
+        }
+    }
 
     public function archive(Event $event_flexible)
     {
@@ -301,4 +332,5 @@ class EventController extends BaseApiController
             return $this->sendError('Failed to upload banner: ' . $e->getMessage(), [], 500);
         }
     }
+    
 }

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class InterviewQueueController extends BaseApiController
 {
-    // Get the queue for a specific slot
+    // Admin, staff, company rep: Get the queue for a specific slot
     public function slotQueue($jobFairId, $slotId)
     {
         try {
@@ -20,6 +20,12 @@ class InterviewQueueController extends BaseApiController
                     $q->where('event_id', $jobFairId);
                 })
                 ->firstOrFail();
+
+            $user = auth()->user();
+            // Company rep: only for their own company
+            if ($user->hasRole('company_representative') && $slot->participation->company_id !== $user->company_id) {
+                return $this->sendError('You are not authorized to view this slot queue.', [], 403);
+            }
 
             $queue = InterviewQueue::with(['user.track', 'interviewRequest'])
                 ->where('slot_id', $slotId)
@@ -70,9 +76,15 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    // Get all queues for a company in a job fair
+    // Admin, staff, company rep: Get all queues for a company in a job fair
     public function companyQueues($jobFairId, $companyId)
     {
+        $user = auth()->user();
+        // Company rep: only for their own company
+        if ($user->hasRole('company_representative') && $user->company_id != $companyId) {
+            return $this->sendError('You are not authorized to view queues for this company.', [], 403);
+        }
+
         try {
             $queues = InterviewQueue::with(['slot', 'user.track', 'interviewRequest'])
                 ->where('company_id', $companyId)
@@ -118,9 +130,15 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    // Get all queues for a student in a job fair
+    // Student: Get all queues for themselves in a job fair
     public function studentQueues($jobFairId, $studentId)
     {
+        $user = auth()->user();
+        // Student: only for themselves
+        if ($user->hasRole('student') && $user->id != $studentId) {
+            return $this->sendError('You are not authorized to view queues for this student.', [], 403);
+        }
+
         try {
             $queues = InterviewQueue::with(['slot', 'company', 'user.track', 'interviewRequest'])
                 ->where('user_id', $studentId)
@@ -159,9 +177,10 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    // Get all queues for a job fair (admin/monitoring)
+    // Admin, staff: Get all queues for a job fair
     public function jobFairQueues($jobFairId)
     {
+        // No extra check needed, middleware restricts to admin/staff
         try {
             $queues = InterviewQueue::with(['slot', 'company', 'user.track', 'interviewRequest'])
                 ->whereHas('slot.participation', function ($q) use ($jobFairId) {
@@ -210,7 +229,7 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    // Update queue position or status (admin action)
+    // Admin, staff: Update queue position or status
     public function updateQueue(Request $request, $jobFairId, $queueId)
     {
         try {
@@ -244,7 +263,7 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    // Remove a student from a queue (admin action)
+    // Admin: Remove a student from a queue
     public function removeFromQueue($jobFairId, $queueId)
     {
         try {

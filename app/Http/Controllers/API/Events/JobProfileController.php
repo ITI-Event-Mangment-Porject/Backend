@@ -35,6 +35,7 @@ class JobProfileController extends BaseApiController
 
     public function jobProfilesPerJobFair($jobFairId)
     {
+        $user = auth()->user();
         $participations = JobFairParticipation::where('event_id', $jobFairId)
             ->where('status', 'approved')
             ->pluck('id');
@@ -46,9 +47,41 @@ class JobProfileController extends BaseApiController
         ->whereIn('participation_id', $participations)
         ->latest()
         ->get();
+        // Diversify response based on user role
+        $result = $jobProfiles->map(function ($jobProfile) use ($user) {
+            $participation = $jobProfile->participation;
+            $company = $participation ? $participation->company : null;
 
+            $isAdminOrStaff = $user && ($user->hasRole('admin') || $user->hasRole('staff'));
+            $isCreatorCompanyRep = $user && $user->hasRole('company_representative') && $participation && $participation->submitted_by === $user->id;
+
+            if ($isAdminOrStaff || $isCreatorCompanyRep) {
+                // Full details
+                return $jobProfile;
+            }
+
+            // Limited info for others
+            return [
+                'id' => $jobProfile->id,
+                'title' => $jobProfile->title,
+                'description' => $jobProfile->description,
+                'requirements' => $jobProfile->requirements,
+                'employment_type' => $jobProfile->employment_type,
+                'location' => $jobProfile->location,
+                'positions_available' => $jobProfile->positions_available,
+                'track_preferences' => $jobProfile->trackPreferences,
+                'company' => $company ? [
+                    'id' => $company->id,
+                    'name' => $company->name,
+                    'logo_path' => $company->logo_path,
+                    'industry' => $company->industry,
+                    'location' => $company->location,
+                    'website' => $company->website,
+                ] : null,
+            ];
+        });
         return $this->sendResponse([
-            'job_profiles' => $jobProfiles
+            'job_profiles' => $result,
         ], 'Job profiles retrieved successfully.');
     }
 
@@ -61,6 +94,11 @@ class JobProfileController extends BaseApiController
 
         if (!$participation) {
             return $this->sendError('Participation not found or not approved.', [], 403);
+        }
+
+        // Ensure the authenticated user is the one who submitted the participation
+        if ($participation->submitted_by !== auth()->id()) {
+            return $this->sendError('You are not authorized to add job profiles for this participation.', [], 403);
         }
 
         $validated = $request->validated();
@@ -93,9 +131,7 @@ class JobProfileController extends BaseApiController
 
     public function update(UpdateJobProfileRequest $request, $jobProfileId)
     {
-        $jobProfile = JobProfile::with('participation')
-            ->where('id', $jobProfileId)
-            ->first();
+        $jobProfile = JobProfile::with('participation')->find($jobProfileId);
 
         if (!$jobProfile) {
             return $this->sendError('Job profile not found.', [], 404);
@@ -105,6 +141,11 @@ class JobProfileController extends BaseApiController
 
         if (!$participation || $participation->status !== 'approved') {
             return $this->sendError('Associated participation is not approved.', [], 403);
+        }
+
+        // Ensure the authenticated user is the one who submitted the participation
+        if ($participation->submitted_by !== auth()->id()) {
+            return $this->sendError('You are not authorized to update job profiles for this participation.', [], 403);
         }
 
         $validated = $request->validated();
@@ -143,18 +184,54 @@ class JobProfileController extends BaseApiController
             return $this->sendError('Job profile not found.', [], 404);
         }
 
-        return $this->sendResponse(
-            $jobProfile,
-            'Job profile retrieved successfully.'
-        );
+        $user = auth()->user();
+        $participation = $jobProfile->participation;
+
+        $isAdminOrStaff = $user && ($user->hasRole('admin') || $user->hasRole('staff'));
+        $isCreatorCompanyRep = $user && $user->hasRole('company_representative') && $participation && $participation->submitted_by === $user->id;
+
+        if ($isAdminOrStaff || $isCreatorCompanyRep) {
+            // Return full details
+            return $this->sendResponse($jobProfile, 'Job profile retrieved successfully.');
+        }
+
+        // For others: return limited info
+        $company = $participation ? $participation->company : null;
+        $result = [
+            'id' => $jobProfile->id,
+            'title' => $jobProfile->title,
+            'description' => $jobProfile->description,
+            'requirements' => $jobProfile->requirements,
+            'employment_type' => $jobProfile->employment_type,
+            'location' => $jobProfile->location,
+            'positions_available' => $jobProfile->positions_available,
+            'track_preferences' => $jobProfile->trackPreferences,
+            'company' => $company ? [
+                'id' => $company->id,
+                'name' => $company->name,
+                'logo_path' => $company->logo_path,
+                'industry' => $company->industry,
+                'location' => $company->location,
+                'website' => $company->website,
+            ] : null,
+        ];
+
+        return $this->sendResponse($result, 'Job profile retrieved successfully.');
     }
 
     public function destroy($jobProfileId)
     {
-        $jobProfile = JobProfile::find($jobProfileId);
+        $jobProfile = JobProfile::with('participation')->find($jobProfileId);
 
         if (!$jobProfile) {
             return $this->sendError('Job profile not found.', [], 404);
+        }
+
+        $participation = $jobProfile->participation;
+
+        // Ensure the authenticated user is the one who submitted the participation
+        if ($participation->submitted_by !== auth()->id()) {
+            return $this->sendError('You are not authorized to delete job profiles for this participation.', [], 403);
         }
 
         try {

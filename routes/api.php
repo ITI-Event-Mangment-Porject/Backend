@@ -27,6 +27,7 @@ use App\Http\Controllers\Event\EventController;
 use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
+use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
 
@@ -71,36 +72,7 @@ Route::prefix('test/live')->group(function () {
     Route::post('/events/{id}/end', [LiveEventController::class, 'end']);          // End a live event
 });
 
-// Public routes
-Route::group([], function () {
-    // Authentication routes
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Public Event Routes Example 
-    |--------------------------------------------------------------------------
-    |
-    // Get list of active/upcoming events
-    // Route::get('/events/active', [EventController::class, 'getActiveEvents']);
-    // 
-    // Search events
-    // Route::get('/events/search', [EventController::class, 'search']);
-    //
-    // Get event details by slug
-    // Route::get('/events/{slug}', [EventController::class, 'getEventBySlug']);
-    //
-    // Get event categories
-    // Route::get('/categories', [CategoryController::class, 'index']);
-    //
-    // Contact form submission
-    // Route::post('/contact', [ContactController::class, 'submit']);
-    //
-    // Newsletter subscription
-    // Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
-    */
-});
 
 // Protected routes (requires authentication)
 Route::prefix('auth')->group(function () {
@@ -130,17 +102,22 @@ Route::prefix('auth')->group(function () {
         Route::post('/', [EventController::class, 'store']);
         
         // Specific routes FIRST (these need to come before the generic /{event_flexible})
-        Route::get('/{event_flexible}/publish', [EventController::class, 'publish']);
-        Route::get('/{event_flexible}/archive', [EventController::class, 'archive']);
+        Route::get('/{event_flexible}/publish', [EventController::class, 'publish'])->middleware('role:admin'); // Publish an event (admin only)
+        Route::get('/{event_flexible}/unpublish', [EventController::class, 'unpublish'])->middleware('role:admin'); // Unpublish an event (admin only)
+        Route::get('/{event_flexible}/archive', [EventController::class, 'archive'])->middleware('role:admin');
         Route::get('/{event_flexible}/banner', [EventController::class, 'getBanner']);
-        Route::post('/{event_flexible}/banner', [EventController::class, 'uploadBanner']);
+        Route::post('/{event_flexible}/banner', [EventController::class, 'uploadBanner'])->middleware('role:admin');
+        Route::put('/{event_flexible}/banner', [EventController::class, 'uploadBanner'])->middleware('role:admin');
+        
         
         
         /* Event Sessions */
         Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
-        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'create']);
-        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update']);
-        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy']);
+        Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'createSession'])->middleware('check.any.role:admin,staff'); // Create a new session (admin/staff only)
+        Route::get('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'show']);
+        
+        Route::put('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'update'])->middleware('role:admin'); // Update a session (admin/staff only)
+        Route::delete('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'destroy'])->middleware('role:admin'); // Delete a session (admin/staff only)
 
         // Live Event routes
         Route::prefix('{event_flexible}/live')->group(function () {
@@ -157,28 +134,13 @@ Route::prefix('auth')->group(function () {
         
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
-        Route::put('/{event_flexible}', [EventController::class, 'update']);
-        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware(RoleMiddleware::class.':admin');
+        Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
+        Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
     });
-    /*
-    |--------------------------------------------------------------------------
-    | Example Category Routes (commented out)
-    |--------------------------------------------------------------------------
-    |
-    // Route::apiResource('categories', CategoryController::class);
-
-    |--------------------------------------------------------------------------
-    | Example User Management Routes (commented out)
-    |--------------------------------------------------------------------------
-    |
-    // Route::prefix('users')->middleware(['admin'])->group(function () {
-    //     Route::get('/', [UserController::class, 'index']);          // List users
-    //     Route::get('/{user}', [UserController::class, 'show']);     // Get user details
-    //     Route::put('/{user}', [UserController::class, 'update']);   // Update user
-    //     Route::delete('/{user}', [UserController::class, 'destroy']); // Delete user
-    // });
-    */
-    // });
+    
+    
+    
+    
 
     //companyController still need admin middleware 
     Route::prefix('companies')->group(function () {
@@ -200,7 +162,7 @@ Route::prefix('auth')->group(function () {
     });
 
     // dashboard controller
-    Route::middleware(['auth'])->prefix('dashboard')->group(function () {
+    Route::middleware(['auth:api'])->prefix('dashboard')->group(function () {
         Route::get('/', [DashboardController::class, 'index']);
         Route::get('/admin', [DashboardController::class, 'adminDashboard']);
         Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
@@ -217,50 +179,58 @@ Route::prefix('auth')->group(function () {
     }); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
 
  // Job Fair Routes No Middleware Yet
-Route::prefix('job-fairs')->group(function(){
-    Route::get('/', [JobFairController::class, 'index']);
+Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
+    Route::get('/', [JobFairController::class, 'index']); 
     Route::get('/{jobFairId}', [JobFairController::class, 'show']);
-    Route::post('/', [JobFairController::class, 'store']);
-    Route::put('/{jobFairId}', [JobFairController::class, 'update']);
-    Route::delete('/{jobFairId}', [JobFairController::class, 'destroy']);
-    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies']);
-    Route::get('/{jobFairId}/statistics', [JobFairController::class, 'statistics']);
+    Route::post('/', [JobFairController::class, 'store'])->middleware('role:admin');
+    Route::put('/{jobFairId}', [JobFairController::class, 'update'])->middleware('role:admin');
+    Route::delete('/{jobFairId}', [JobFairController::class, 'destroy'])->middleware('role:admin');
+    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/statistics', [JobFairController::class, 'statistics'])->middleware('check.any.role:admin,staff');
 
-    Route::post('/{jobFairId}/participate', [JobFairParticipationController::class, 'store']);
-    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index']);
-    Route::get('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'show']);
-    Route::put('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'review']);
+    Route::post('/{jobFairId}/participate', [JobFairParticipationController::class, 'store'])->middleware('role:company_representative');
+    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'show'])->middleware( 'check.any.role:admin,staff,company_representative');
+    Route::put('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'review'])->middleware('role:admin');
 
     Route::get('/{jobFairId}/participations/{participationId}/job-profiles', [JobProfileController::class, 'jobProfilesPerParticipation']);
     Route::get('{jobFairId}/job-profiles', [JobProfileController::class, 'jobProfilesPerJobFair']);
-    Route::post('/{jobFairId}/participations/{participationId}/job-profiles', [JobProfileController::class, 'store']);
+    Route::post('/{jobFairId}/participations/{participationId}/job-profiles', [JobProfileController::class, 'store'])->middleware('role:company_representative');
     Route::get('/job-profiles/{jobProfileId}', [JobProfileController::class, 'show']);
-    Route::put('/job-profiles/{jobProfileId}', [JobProfileController::class, 'update']);
-    Route::delete('/job-profiles/{jobProfileId}', [JobProfileController::class, 'destroy']);
+    Route::put('/job-profiles/{jobProfileId}', [JobProfileController::class, 'update'])->middleware('role:company_representative');
+    Route::delete('/job-profiles/{jobProfileId}', [JobProfileController::class, 'destroy'])->middleware('role:company_representative');
 
-    Route::get('/{jobFairId}/interview-slots', [InterviewSlotController::class, 'jobFairSlots']);
-    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots']);
-    Route::post('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'store']);
-    Route::get('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'show']);
-    Route::put('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'update']);
-    Route::delete('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'destroy']);
+    Route::get('/{jobFairId}/interview-slots', [InterviewSlotController::class, 'jobFairSlots'])->middleware('role:admin');
+    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::post('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'store'])->middleware('role:company_representative');
+    Route::get('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'show'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::put('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'update'])->middleware('role:company_representative');
+    Route::delete('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'destroy'])->middleware('role:company_representative');
 
-    Route::post('{jobFairId}/interview-requests', [InterviewRequestController::class, 'store']);
-    Route::get('{jobFairId}/interview-requests/my', [InterviewRequestController::class, 'myRequests']);
-    Route::get('{jobFairId}/job-profiles/{jobProfileId}/interview-requests', [InterviewRequestController::class, 'jobProfileRequests']);
-    Route::put('interview-requests/{requestId}/review', [InterviewRequestController::class, 'review']);
+    Route::post('{jobFairId}/interview-requests', [InterviewRequestController::class, 'store'])->middleware('role:student');
+    Route::get('{jobFairId}/interview-requests/my', [InterviewRequestController::class, 'myRequests'])->middleware('role:student');
+    Route::get('{jobFairId}/job-profiles/{jobProfileId}/interview-requests', [InterviewRequestController::class, 'jobProfileRequests'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::put('interview-requests/{requestId}/review', [InterviewRequestController::class, 'review'])->middleware('role:company_representative');
 
-    Route::get('/{jobFairId}/branding-day/candidates', [BrandingDayController::class, 'candidates']);
+    Route::get('/{jobFairId}/branding-day/candidates', [BrandingDayController::class, 'candidates'])->middleware('check.any.role:admin,staff');
     Route::get('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'index']);
-    Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store']);
-    Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update']);
-    Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy']);
+    Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store'])->middleware('role:admin');
+    Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update'])->middleware('role:admin');
+    Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy'])->middleware('role:admin');
 
-    Route::get('{jobFairId}/queues/slot/{slotId}', [InterviewQueueController::class, 'slotQueue']);
-    Route::get('{jobFairId}/queues/company/{companyId}', [InterviewQueueController::class, 'companyQueues']);
-    Route::get('{jobFairId}/queues/student/{studentId}', [InterviewQueueController::class, 'studentQueues']);
+    Route::get('{jobFairId}/queues/slot/{slotId}', [InterviewQueueController::class, 'slotQueue'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::get('{jobFairId}/queues/company/{companyId}', [InterviewQueueController::class, 'companyQueues'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::get('{jobFairId}/queues/student/{studentId}', [InterviewQueueController::class, 'studentQueues'])->middleware('role:student');
+    Route::get('{jobFairId}/queues/', [InterviewQueueController::class, 'jobFairQueues'])->middleware('check.any.role:admin,staff');
+    Route::put('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'updateQueue'])->middleware('check.any.role:admin,staff');
+    Route::delete('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'removeFromQueue'])->middleware('role:admin');
+    
+    
     Route::get('{jobFairId}/queues/', [InterviewQueueController::class, 'jobFairQueues']);
-    Route::put('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'updateQueue']);
+    Route::put('{jobFairId}/queues/{queueId}/pending', [InterviewQueueController::class, 'pending']);
+    Route::put('{jobFairId}/queues/{queueId}/resume', [InterviewQueueController::class, 'resume']);
+    Route::put('{jobFairId}/queues/{queueId}/requeue-last', [InterviewQueueController::class, 'requeueLast']);
+    Route::put('{jobFairId}/queues/{queueId}/next', [InterviewQueueController::class, 'next']);
     Route::delete('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'removeFromQueue']);
 
 });
@@ -281,7 +251,9 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
 });
 
 
-// notification 
+
+// Notifications Routes 
+
 Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
@@ -297,7 +269,9 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 
 
 // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+
+Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
+
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::post('/', [BulkMessageController::class, 'store']);
     Route::post('/{id}/send', [BulkMessageController::class, 'send']);
