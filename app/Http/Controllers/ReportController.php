@@ -61,6 +61,7 @@ class ReportController extends BaseApiController
                     'total_registration' => $validRegistrations->count(),
                     'attendees' => $validRegistrations->map(function ($r) {
                         return [
+                            'id'=>$r->id,
                             'name' => $r->user->first_name . " " . $r->user->last_name,
                             'email' => $r->user->email,
                             'phone' => $r->user->phone
