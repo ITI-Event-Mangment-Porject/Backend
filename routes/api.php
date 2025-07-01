@@ -227,6 +227,7 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     
     
     Route::get('{jobFairId}/queues/', [InterviewQueueController::class, 'jobFairQueues']);
+    Route::put('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'updateQueue']);
     Route::put('{jobFairId}/queues/{queueId}/pending', [InterviewQueueController::class, 'pending']);
     Route::put('{jobFairId}/queues/{queueId}/resume', [InterviewQueueController::class, 'resume']);
     Route::put('{jobFairId}/queues/{queueId}/requeue-last', [InterviewQueueController::class, 'requeueLast']);
@@ -267,7 +268,6 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 
 
 
-
 // Bulk Messages Routes 
 
 Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
@@ -283,4 +283,8 @@ Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':ad
     Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
+});
+
+Route::fallback(function () {
+    return response()->json(['message' => 'Not Found'], 404);
 });
