@@ -284,3 +284,15 @@ Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':ad
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
 });
+
+
+Route::prefix('events/{event}/insights')->middleware(['auth', 'role:admin'])->group(function () {
+    Route::post('generate', [AIInsightsController::class, 'generate']);
+    Route::get('/', [AIInsightsController::class, 'index']);
+});
+
+Route::prefix('insights')->middleware('auth')->group(function () {
+    Route::get('dashboard', [AIInsightsController::class, 'dashboard'])->middleware('role:admin');
+    Route::get('{insight}', [AIInsightsController::class, 'show']);
+    Route::put('{insight}', [AIInsightsController::class, 'update'])->middleware('role:admin');
+});

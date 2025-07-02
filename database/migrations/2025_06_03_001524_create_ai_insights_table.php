@@ -11,17 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ai_insights', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('event_id')->constrained()->onDelete('cascade');
-            $table->enum('insight_type', ['feedback_summary', 'attendance_analysis', 'engagement_metrics']);
-            $table->json('data'); // Store AI-generated insights
-            $table->decimal('satisfaction_score', 3, 2)->nullable(); // Average satisfaction
-            $table->json('key_themes')->nullable(); // Common themes/keywords
-            $table->text('recommendations')->nullable();
-            $table->timestamp('generated_at')->useCurrent();
+        Schema::table('ai_insights', function (Blueprint $table) {
+            // Add AI summary field
+            $table->text('ai_summary')->nullable()->after('recommendations');
             
+            // Add approval workflow fields
+            $table->boolean('is_approved')->default(false)->after('ai_summary');
+            $table->text('admin_notes')->nullable()->after('is_approved');
+            $table->bigInteger('approved_by')->nullable()->after('admin_notes');
+            $table->timestamp('approved_at')->nullable()->after('approved_by');
+            
+            // Add foreign key constraint
+            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
+            
+            // Add indexes for better performance
             $table->index(['event_id', 'insight_type']);
+            $table->index(['is_approved']);
+            $table->index(['generated_at']);
         });
     }
 
@@ -30,6 +36,23 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ai_insights');
+        Schema::table('ai_insights', function (Blueprint $table) {
+            // Drop foreign key first
+            $table->dropForeign(['approved_by']);
+            
+            // Drop indexes
+            $table->dropIndex(['event_id', 'insight_type']);
+            $table->dropIndex(['is_approved']);
+            $table->dropIndex(['generated_at']);
+            
+            // Drop columns
+            $table->dropColumn([
+                'ai_summary',
+                'is_approved', 
+                'admin_notes',
+                'approved_by',
+                'approved_at'
+            ]);
+        });
     }
 };
