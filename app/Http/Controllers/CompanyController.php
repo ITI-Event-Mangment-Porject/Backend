@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 
 use App\Http\Controllers\API\AuthController;
-use Auth;
+use App\Http\Controllers\API\BaseApiController;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use App\Models\Company\Company;
+use Exception;
 use Illuminate\Validation\ValidationException;
-use Storage;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Contracts\Service\Attribute\Required;
-class CompanyController extends Controller
+use Illuminate\Support\Facades\Auth;
+class CompanyController extends BaseApiController
 {
     //create new company
     public function store(Request $request)
@@ -67,28 +71,37 @@ class CompanyController extends Controller
     public function index(Request $request)
     {
         try {
-            // using qruey so that i can filter the response
-            $query = Company::query();
-            if ($request->has('is_approved')) {
-                $query->where('is_approved', $request->boolean('is_approved'));
-            }
+            $query = QueryBuilder::for(Company::class)
+                ->withCount([
+                    'jobFairParticipations',
+                    'interviewRequests',
+                    'interviewQueues as filled_interviews_count',
+                ])
+                ->allowedFilters([
+                    AllowedFilter::exact('is_approved'),
+                    AllowedFilter::exact('industry'),
+                    AllowedFilter::exact('size'),
+                    AllowedFilter::partial('name'),
+                    AllowedFilter::partial('location'),
+                ])
+                ->defaultSort('-created_at');
+            $companies = $query->paginate($request->get('per_page', 15));
+            $companies->getCollection()->transform(function ($company) {
+                $company->available_interviews = $company->interview_requests_count - $company->filled_interviews_count;
+                return $company;
+            });
 
-            if ($request->has('industry')) {
-                $query->where('industry', $request->industry);
-            }
+            $totalCount = Company::count();
+            $approvedCount = Company::where('is_approved', true)->count();
 
-            if ($request->has('size')) {
-                $query->where('size', $request->size);
-            }
-            $companies = $query->latest()->get();
+            return $this->sendResponse([
+                'companies' => $companies,
+                'total_count' => $totalCount,
+                'approved_count' => $approvedCount
+            ], 'Get all Companies', 200);
 
-            return response()->json($companies);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve companies',
-                'error' => $e->getMessage()
-            ], 500);
+        } catch (Exception $e) {
+            return $this->sendError('Failed to retrieve companies', ['error' => $e->getMessage()], 500);
         }
 
 
@@ -98,6 +111,9 @@ class CompanyController extends Controller
     {
         try {
             $company = Company::findOrFail($id);
+            return $this->sendResponse($company, 'company retrieved successfully', 200);
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('company not found', ['error' => $e->getMessage()], 404);
 
             return response()->json([
                 'success' => true,
