@@ -6,6 +6,7 @@ use App\Models\Event\Event;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use \Illuminate\Support\Facades\Storage;
 
 class EventFactory extends Factory
 {
@@ -32,7 +33,30 @@ class EventFactory extends Factory
             'end_date' => $endDate->format('Y-m-d'),
             'start_time' => $this->faker->time('H:i:s'),
             'end_time' => $this->faker->time('H:i:s'),
-            'banner_image' => $this->faker->optional()->imageUrl(1200, 600, 'business'),
+            'banner_image' => function () {
+                $imageName = uniqid('banner_') . '.png';
+                $imagePath = 'events/banners/' . $imageName;
+
+                // Create a dummy image
+                $width = 1200;
+                $height = 600;
+                $image = imagecreatetruecolor($width, $height);
+                $backgroundColor = imagecolorallocate($image, 0, 119, 190); // #0077be
+                $textColor = imagecolorallocate($image, 255, 255, 255); // #ffffff
+                imagefill($image, 0, 0, $backgroundColor);
+                imagestring($image, 5, ($width / 2) - 50, ($height / 2) - 10, 'Event Banner', $textColor);
+
+                // Get image contents
+                ob_start();
+                imagepng($image);
+                $imageContents = ob_get_clean();
+                imagedestroy($image);
+
+                // Store the dummy image
+                \Illuminate\Support\Facades\Storage::disk('public')->put($imagePath, $imageContents);
+
+                return '/storage/' . $imagePath;
+            },
             'registration_deadline' => $this->faker->optional()->dateTimeBetween('now', $startDate),
             'visibility_type' => $this->faker->randomElement($visibilityTypes),
             'visibility_config' => function (array $attributes) {
