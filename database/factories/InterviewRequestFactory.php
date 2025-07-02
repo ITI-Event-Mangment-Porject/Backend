@@ -1,6 +1,7 @@
 <?php
 
 namespace Database\Factories;
+
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\Event\Event;
 use App\Models\Auth\User;

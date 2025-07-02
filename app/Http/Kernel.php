@@ -48,8 +48,15 @@ class Kernel extends HttpKernel
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         
+        // Spatie Permission Middleware
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        'check.any.role' => \App\Http\Middleware\CheckAnyRole::class,                
+        
+        // JWT Middleware
+        'jwt.auth' => Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+        'jwt.refresh' => Tymon\JWTAuth\Http\Middleware\RefreshToken::class,
     ];
 }

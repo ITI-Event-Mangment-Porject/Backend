@@ -102,7 +102,8 @@ return [
     */
 
     'ttl' => (int) env('JWT_TTL', 60),
-
+    'refresh_ttl' => 20160, // 2 weeks in minutes
+    
     /*
     |--------------------------------------------------------------------------
     | Refresh time to live
@@ -119,8 +120,6 @@ return [
     | systems in place to revoke the token if necessary.
     |
     */
-
-    'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),
 
     /*
     |--------------------------------------------------------------------------

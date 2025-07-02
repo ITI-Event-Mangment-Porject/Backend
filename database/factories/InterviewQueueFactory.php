@@ -6,6 +6,7 @@ use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\Company\Company;
 use App\Models\Auth\User;
+use App\Models\JobFair\InterviewSlot;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class InterviewQueueFactory extends Factory
@@ -21,6 +22,7 @@ class InterviewQueueFactory extends Factory
             'interview_request_id' => InterviewRequest::factory(),
             'company_id' => Company::factory(),
             'user_id' => User::factory(),
+            'slot_id' => InterviewSlot::factory(),
             'queue_position' => $this->faker->numberBetween(1, 20),
             'status' => $status,
             'interview_started_at' => in_array($status, ['in_interview', 'completed']) ? 

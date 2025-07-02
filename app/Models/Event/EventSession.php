@@ -21,6 +21,7 @@ class EventSession extends Model
         'is_break' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        
     ];
     protected static function newFactory()
     {
@@ -31,4 +32,5 @@ class EventSession extends Model
     {
         return $this->belongsTo(Event::class);
     }
+    
 }

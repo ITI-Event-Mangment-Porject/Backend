@@ -11,6 +11,7 @@ use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\Auth\User;
 use App\Models\Auth\Track;
+use App\Models\JobFair\BrandingDaySchedule;
 use Illuminate\Database\Seeder;
 
 class JobFairSeeder extends Seeder
@@ -26,6 +27,9 @@ class JobFairSeeder extends Seeder
         foreach ($jobFairs as $jobFair) {
             // Create company participations
             foreach ($companies->random(8) as $company) {
+                // Randomly decide if this participation needs branding
+                $needBranding = fake()->boolean(40); // 40% chance
+
                 $participation = JobFairParticipation::updateOrCreate(
                     [
                         'event_id' => $jobFair->id,
@@ -36,6 +40,7 @@ class JobFairSeeder extends Seeder
                         'reviewed_by' => $reviewer->id,
                         'reviewed_at' => now()->subDays(rand(5, 15)),
                         'submitted_by' => $reviewer->id,
+                        'need_branding' => $needBranding,
                     ]
                 );
 
@@ -93,20 +98,24 @@ class JobFairSeeder extends Seeder
                         'reviewed_at' => now()->subDays(rand(1, 10)),
                     ]);
 
-                    // Create interview queue entry for approved requests
-                    if ($request->status === 'approved') {
-                        InterviewQueue::factory()->create([
-                            'interview_request_id' => $request->id,
-                            'company_id' => $company->id,
-                            'user_id' => $student->id,
-                            'queue_position' => rand(1, 15),
-                            'status' => fake()->randomElement(['waiting', 'completed', 'in_interview']),
-                        ]);
-                    }
+                    // InterviewQueue entries will be created by the automated job/command, not here.
+                }
+
+                // Seed BrandingDaySchedule for participations that need branding
+                if ($needBranding) {
+                    BrandingDaySchedule::create([
+                        'event_id' => $jobFair->id,
+                        'company_id' => $company->id,
+                        'participation_id' => $participation->id,
+                        'branding_day_date' => $jobFair->start_date,
+                        'start_time' => fake()->time('H:i:s', '17:00:00'),
+                        'end_time' => fake()->time('H:i:s', '18:00:00'),
+                        'order' => rand(1, 20),
+                    ]);
                 }
             }
 
-                    // Create some pending participations
+            // Create some pending participations
             foreach ($companies->random(3) as $company) {
                 JobFairParticipation::updateOrCreate(
                     [
