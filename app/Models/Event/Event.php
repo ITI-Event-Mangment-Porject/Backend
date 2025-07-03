@@ -20,15 +20,31 @@ class Event extends Model
     //
     use HasFactory;
     protected $fillable = [
-        'title', 'slug', 'description', 'type', 'status', 'location',
-        'start_date', 'end_date', 'start_time', 'end_time', 'banner_image',
-        'registration_deadline', 'visibility_type', 'visibility_config',
-        'slido_qr_code', 'slido_embed_url', 'created_by', 'archived_at'
+        'title',
+        'slug',
+        'description',
+        'type',
+        'status',
+        'location',
+        'start_date',
+        'end_date',
+        'start_time',
+        'end_time',
+        'banner_image',
+        'registration_deadline',
+        'visibility_type',
+        'visibility_config',
+        'slido_qr_code',
+        'slido_embed_url',
+        'created_by',
+        'archived_at'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'start_time' => 'string',
+        'end_time' => 'string',
         'registration_deadline' => 'datetime',
         'visibility_config' => 'array',
         'archived_at' => 'datetime',
@@ -100,4 +116,30 @@ class Event extends Model
     {
         return in_array($this->status, ['published', 'ongoing']);
     }
+
+    // Time formatting helpers
+    public function getStartTimeOnlyAttribute()
+    {
+        return $this->start_time; // Already a time string like "14:30:00"
+    }
+
+    public function getEndTimeOnlyAttribute()
+    {
+        return $this->end_time; // Already a time string like "16:30:00"
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['published', 'ongoing'])
+                     ->where(function ($query) {
+                         $query->whereNull('archived_at')
+                               ->orWhere('archived_at', '>', now());
+                     });
+    }
+//     public function resolveRouteBinding($value, $field = null)
+// {
+//     return $this->where('id', $value)
+//                 ->orWhere('slug', $value)
+//                 ->firstOrFail();
+// }
 }

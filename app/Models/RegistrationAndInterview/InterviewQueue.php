@@ -4,6 +4,7 @@ namespace App\Models\RegistrationAndInterview;
 
 use App\Models\Company\Company;
 use App\Models\Auth\User;
+use App\Models\JobFair\InterviewSlot;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,7 +16,7 @@ class InterviewQueue extends Model
     protected $table = 'interview_queue';
 
     protected $fillable = [
-        'interview_request_id', 'company_id', 'user_id', 'queue_position',
+        'interview_request_id', 'company_id', 'user_id', 'slot_id', 'queue_position',
         'status', 'interview_started_at', 'interview_ended_at',
         'notes', 'updated_by'
     ];
@@ -27,6 +28,8 @@ class InterviewQueue extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+
     protected static function newFactory()
     {
         return \Database\Factories\InterviewQueueFactory::new();
@@ -50,5 +53,10 @@ class InterviewQueue extends Model
     public function updatedBy()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function slot()
+    {
+        return $this->belongsTo(InterviewSlot::class, 'slot_id');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models\JobFair;
 
+use App\Models\Auth\Track;
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,5 +39,23 @@ class JobProfile extends Model
     public function interviewRequests()
     {
         return $this->hasMany(InterviewRequest::class);
+    }
+ public function tracks()
+    {
+        return $this->belongsToMany(
+            Track::class,
+            'job_profile_tracks',
+            'job_profile_id',
+            'track_id'
+        );
+    }
+    
+    public function isEmpty()
+    {
+        return $this->positions_available <= 0;
+    }
+    public function isFull()
+    {
+        return $this->positions_available <= 0;
     }
 }

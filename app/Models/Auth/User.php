@@ -12,18 +12,20 @@ use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\RegistrationAndInterview\EventRegistration;
-use Spatie\Permission\Models\Role;
+use Spatie\Permission\Contracts\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Tymon\JWTAuth\Contracts\JWTSubject;
+
+
+
 class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles ;
-    use HasRoles;
-
 
     /**
      * The attributes that are mass assignable.
@@ -89,12 +91,7 @@ class User extends Authenticatable implements JWTSubject
     /**
      * User roles relationship
      */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot(['assigned_by', 'assigned_at', 'is_active'])
-                    ->wherePivot('is_active', true);
-    }
+    
     public function eventRegistrations()
     {
         return $this->hasMany(EventRegistration::class);
@@ -145,13 +142,17 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->first_name . ' ' . $this->last_name;
     }
+    
     public function getJWTIdentifier()
     {
-        return $this->getKey();
+        return $this->getKey(); // usually the user's ID
     }
 
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     */
     public function getJWTCustomClaims()
     {
-        return [];
+        return []; // Add custom claims if needed
     }
 }
