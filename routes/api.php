@@ -11,6 +11,8 @@ use App\Http\Controllers\API\Events\LiveEventController;
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingController;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Jobs\Job;
 use Illuminate\Support\Facades\Route;
@@ -179,6 +181,22 @@ Route::prefix('auth')->group(function () {
             Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
         });
     }); // <-- This closes the Route::middleware(['auth'])->prefix('dashboard')->group
+
+
+//setting controller  missing middleware of admin
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SettingController::class, 'index']);
+    Route::put('/{key}', [SettingController::class, 'update']);
+    Route::get('/public', [SettingController::class, 'getPublic']); // all public settings
+});
+
+// missing middleware
+Route::prefix('/reports')->group(function () {
+    Route::get('/events', [ReportController::class, 'eventsReports']);
+    Route::get('/attendance', [ReportController::class, 'attendanceReports']);
+    Route::get('/feedback', [ReportController::class, 'feedbackReports']);
+    Route::get('/export', [ReportController::class, 'exportReports']);
+});
 
  // Job Fair Routes No Middleware Yet
 Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
