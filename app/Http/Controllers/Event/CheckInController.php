@@ -13,7 +13,7 @@ class CheckInController extends BaseApiController
 {
     public function checkIn(Request $request, $eventId)
     {
-        $user = Auth::user();
+        $user = auth()->user();
         $event = Event::findOrFail($eventId);
 
         $registration = EventRegistration::where('event_id', $event->id)
