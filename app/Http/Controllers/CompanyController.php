@@ -23,9 +23,9 @@ class CompanyController extends BaseApiController
     {
         try {
             $data = $request->validated();
-            $data['is_approved'] = false;
+            $data['is_approved']=false;
             $company = Company::create($data);
-            return $this->sendResponse($company, 'Company created successfully', 201);
+            return $this->sendResponse($company, 'Company created successfully',201);
         } catch (Exception $e) {
             return $this->sendError('Failed to create company', ['error' => $e->getMessage()], 500);
         }
