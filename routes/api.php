@@ -27,6 +27,7 @@ use App\Http\Controllers\Event\EventController;
 use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
+use App\Http\Controllers\Event\CheckInController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
@@ -131,6 +132,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
         Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
         Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
+        Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student'); // Check-in to an event (student only)
         
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
