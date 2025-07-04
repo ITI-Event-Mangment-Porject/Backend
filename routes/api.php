@@ -248,9 +248,10 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
     Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware(RoleMiddleware::class.':admin');;
     // Toggle form status (admin only)
     Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
+    // AI-powered feedback analysis
+    Route::post('/events/{eventId}/analyze', [AIInsightsController::class, 'generateInsights'])
+        ->middleware(RoleMiddleware::class . ':admin');
 });
-
-
 
 // Notifications Routes 
 
@@ -262,11 +263,6 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
         ;
 });
-
-
-
-
-
 
 // Bulk Messages Routes 
 
@@ -291,8 +287,30 @@ Route::prefix('events/{event}/insights')->middleware(['auth', 'role:admin'])->gr
     Route::get('/', [AIInsightsController::class, 'index']);
 });
 
-Route::prefix('insights')->middleware('auth')->group(function () {
-    Route::get('dashboard', [AIInsightsController::class, 'dashboard'])->middleware('role:admin');
-    Route::get('{insight}', [AIInsightsController::class, 'show']);
-    Route::put('{insight}', [AIInsightsController::class, 'update'])->middleware('role:admin');
+// AI Insights Routes
+
+Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
+    // Generate AI insights for event feedback (Admin only)
+    Route::post('/events/{eventId}/generate', [AIInsightsController::class, 'generateInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.generate');
+    // Get AI insights for specific event (All authenticated users)
+    Route::get('/events/{eventId}', [AIInsightsController::class, 'show'])
+        ->name('ai.insights.show');
+    // List all events with insights (Admin only)
+    Route::get('/', [AIInsightsController::class, 'index'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.index');
+    // Update AI insights (Admin only)
+    Route::put('/{insightId}', [AIInsightsController::class, 'update'])
+        ->middleware(RoleMiddleware::class . ':admin')
+        ->name('ai.insights.update');
+    // Delete AI insights (Admin only)
+    Route::delete('/{insightId}', [AIInsightsController::class, 'destroy'])
+        ->middleware(RoleMiddleware::class . ':admin')
+        ->name('ai.insights.destroy');
+    // Get insights trends and analytics (Admin only)
+    Route::get('/trends/analysis', [AIInsightsController::class, 'trends'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.trends');
 });

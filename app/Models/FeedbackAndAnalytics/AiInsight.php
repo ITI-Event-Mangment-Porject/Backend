@@ -3,7 +3,6 @@
 namespace App\Models\FeedbackAndAnalytics;
 
 use App\Models\Event\Event;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,96 +11,60 @@ class AiInsight extends Model
     use HasFactory;
 
     protected $fillable = [
-        'event_id', 
-        'insight_type', 
-        'data', 
+        'event_id',
+        'insight_type',
+        'data',
         'satisfaction_score',
-        'key_themes', 
+        'key_themes',
         'recommendations',
-        'ai_summary',           // ADD: AI-generated summary
-        'is_approved',          // ADD: Admin approval status
-        'admin_notes',          // ADD: Admin notes/comments
-        'approved_by',          // ADD: Who approved it
-        'approved_at',          // ADD: When approved
         'generated_at'
     ];
 
     protected $casts = [
         'data' => 'array',
-        'satisfaction_score' => 'decimal:2',
         'key_themes' => 'array',
-        'is_approved' => 'boolean',     // ADD: Cast to boolean
+        'satisfaction_score' => 'decimal:2',
         'generated_at' => 'datetime',
-        'approved_at' => 'datetime',    // ADD: Cast to datetime
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    // Relationships
+    protected static function newFactory()
+    {
+        return \Database\Factories\AiInsightFactory::new();
+    }
+
     public function event()
     {
         return $this->belongsTo(Event::class);
     }
 
-    // ADD: Relationship to user who approved
-    public function approvedBy()
+    // Helper methods
+    public function getAnalysisData(): array
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return is_array($this->data) ? $this->data : json_decode($this->data, true) ?? [];
     }
 
-    // Scopes for easier querying
-    public function scopeApproved($query)
+    public function getKeyThemes(): array
     {
-        return $query->where('is_approved', true);
+        return is_array($this->key_themes) ? $this->key_themes : json_decode($this->key_themes, true) ?? [];
     }
 
-    public function scopePending($query)
+    public function isApproved(): bool
     {
-        return $query->where('is_approved', false)->orWhereNull('approved_at');
+        $data = $this->getAnalysisData();
+        return $data['admin_approved'] ?? false;
     }
 
-    public function scopeByType($query, $type)
+    public function getSummary(): string
     {
-        return $query->where('insight_type', $type);
+        $data = $this->getAnalysisData();
+        return $data['summary'] ?? 'No summary available';
     }
 
-    public function scopeRecent($query, $days = 7)
+    public function getRecommendations(): array
     {
-        return $query->where('generated_at', '>=', now()->subDays($days));
-    }
-
-    // Accessor for formatted satisfaction score
-    public function getFormattedSatisfactionScoreAttribute()
-    {
-        return $this->satisfaction_score ? number_format($this->satisfaction_score, 1) . '/5.0' : 'N/A';
-    }
-
-    // Accessor to check if insight is fresh (generated within last 24 hours)
-    public function getIsFreshAttribute()
-    {
-        return $this->generated_at && $this->generated_at->diffInHours(now()) < 24;
-    }
-
-    // Method to approve insight
-    public function approve($userId, $notes = null)
-    {
-        $this->update([
-            'is_approved' => true,
-            'approved_by' => $userId,
-            'approved_at' => now(),
-            'admin_notes' => $notes
-        ]);
-    }
-
-    // Method to get insight status
-    public function getStatusAttribute()
-    {
-        if ($this->is_approved) {
-            return 'approved';
-        }
-        
-        if ($this->approved_at === null) {
-            return 'pending';
-        }
-        
-        return 'rejected';
+        $data = $this->getAnalysisData();
+        return $data['recommendations'] ?? [];
     }
 }

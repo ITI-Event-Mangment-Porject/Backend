@@ -11,23 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ai_insights', function (Blueprint $table) {
-            // Add AI summary field
-            $table->text('ai_summary')->nullable()->after('recommendations');
+        Schema::create('ai_insights', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+            $table->enum('insight_type', [
+                'feedback_summary', 
+                'attendance_analysis', 
+                'engagement_metrics',
+                'trend_analysis'
+            ])->default('feedback_summary');
+            $table->json('data'); // Store AI-generated insights
+            $table->decimal('satisfaction_score', 3, 2)->nullable(); // Average satisfaction (0.00 to 5.00)
+            $table->json('key_themes')->nullable(); // Common themes/keywords
+            $table->text('recommendations')->nullable(); // AI recommendations summary
+            $table->timestamp('generated_at')->useCurrent();
+            $table->timestamps();
             
-            // Add approval workflow fields
-            $table->boolean('is_approved')->default(false)->after('ai_summary');
-            $table->text('admin_notes')->nullable()->after('is_approved');
-            $table->bigInteger('approved_by')->nullable()->after('admin_notes');
-            $table->timestamp('approved_at')->nullable()->after('approved_by');
-            
-            // Add foreign key constraint
-            $table->foreign('approved_by')->references('id')->on('users')->onDelete('set null');
-            
-            // Add indexes for better performance
+            // Indexes for better performance
             $table->index(['event_id', 'insight_type']);
-            $table->index(['is_approved']);
-            $table->index(['generated_at']);
+            $table->index('generated_at');
+            $table->index('satisfaction_score');
         });
     }
 
@@ -36,23 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('ai_insights', function (Blueprint $table) {
-            // Drop foreign key first
-            $table->dropForeign(['approved_by']);
-            
-            // Drop indexes
-            $table->dropIndex(['event_id', 'insight_type']);
-            $table->dropIndex(['is_approved']);
-            $table->dropIndex(['generated_at']);
-            
-            // Drop columns
-            $table->dropColumn([
-                'ai_summary',
-                'is_approved', 
-                'admin_notes',
-                'approved_by',
-                'approved_at'
-            ]);
-        });
+        Schema::dropIfExists('ai_insights');
     }
 };
