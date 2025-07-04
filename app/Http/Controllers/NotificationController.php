@@ -103,4 +103,15 @@ class NotificationController extends Controller
             'notification' => $notification,
         ], 201);
     }
+
+
+    public function allNotifications(Request $request)
+{
+  
+    $notifications = Notification::with('user') 
+        ->orderBy('created_at', 'desc')
+        ->paginate($request->input('per_page', 15));
+
+    return response()->json($notifications);
+}
 }

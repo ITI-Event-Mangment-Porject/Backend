@@ -29,7 +29,7 @@ use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
-
+use App\Models\Auth\User;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -287,8 +287,8 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
-        ;
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin') ;
+    Route::get('/all', [NotificationController::class, 'allNotifications'])->middleware(['auth:api', RoleMiddleware::class.':admin']);
 });
 
 
@@ -310,3 +310,4 @@ Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':ad
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
 });
+
