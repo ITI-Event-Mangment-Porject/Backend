@@ -14,6 +14,10 @@ class NotificationController extends Controller
      */
     public function index(Request $request)
     {
+        // Validate the request parameters
+        $request->validate([
+            'per_page' => 'integer|min:1|max:100',
+        ]);
         $notifications = Notification::where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->paginate($request->input('per_page', 15));

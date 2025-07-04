@@ -13,10 +13,18 @@ class JobFairController extends BaseApiController
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = Event::query()->where('type', 'Job Fair');
-        if ($request->has('status')){
-            $query->where('status', $request->input('status'));
+
+        // Only admin/staff can see all, others see only published
+        if (!($user->hasRole('admin') || $user->hasRole('staff'))) {
+            $query->where('status', 'published');
+        } else {
+            if ($request->has('status')) {
+                $query->where('status', $request->input('status'));
+            }
         }
+
         if ($request->has('start_date')) {
             $query->where('start_date', '>=', $request->input('start_date'));
         }
@@ -29,6 +37,7 @@ class JobFairController extends BaseApiController
 
     public function show($jobfairid)
     {
+        $user = auth()->user();
         $event = Event::with('visibilityTracks.track:id,name')
             ->where('id', $jobfairid)
             ->where('type', 'Job Fair')
@@ -36,6 +45,11 @@ class JobFairController extends BaseApiController
 
         if (!$event) {
             return $this->sendError('Job Fair not found.');
+        }
+
+        // Only admin/staff can see non-published job fairs
+        if ($event->status !== 'published' && !($user->hasRole('admin') || $user->hasRole('staff'))) {
+            return $this->sendError('You are not authorized to view this job fair.', [], 403);
         }
 
         $response = $event->toArray();
@@ -54,7 +68,7 @@ class JobFairController extends BaseApiController
                 'slug' => Str::slug($validated['title']) . '-' . Str::random(5),
                 'type' => 'Job Fair',
                 'status' => 'draft',
-                'created_by' => $validated['created_by'] ?? auth()->id() ?? 1
+                'created_by' => $validated['created_by'] ?? auth()->id()
             ]);
 
             return $this->sendResponse($event, 'Job Fair created in draft status.', 201);
@@ -130,25 +144,59 @@ class JobFairController extends BaseApiController
 
     public function statistics($jobfairid)
     {
-        $event = Event::where('id', $jobfairid)->where('type', 'Job Fair')->first();
+        $event = Event::with([
+            'jobFairParticipations.company',
+            'jobFairParticipations.jobProfiles',
+            'interviewRequests'
+        ])
+        ->where('id', $jobfairid)
+        ->where('type', 'Job Fair')
+        ->first();
 
         if (!$event) {
             return $this->sendError('Job Fair not found.');
         }
 
-        $companies = $event->jobFairParticipations()
-            ->with('company:id,name')
-            ->get()
+        // All companies
+        $companies = $event->jobFairParticipations
             ->pluck('company.name')
             ->unique()
             ->values()
             ->toArray();
 
+        // Approved companies
+        $approvedCompanies = $event->jobFairParticipations
+            ->where('status', 'approved')
+            ->pluck('company.name')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Total participations
+        $totalParticipations = $event->jobFairParticipations->count();
+
+        // Total job profiles
+        $totalJobProfiles = $event->jobFairParticipations
+            ->flatMap(function ($participation) {
+                return $participation->jobProfiles;
+            })
+            ->count();
+
+        // Total interviews
+        $totalInterviews = $event->interviewRequests->count();
+
+        // Approved interview requests
+        $approvedInterviews = $event->interviewRequests
+            ->where('status', 'approved')
+            ->count();
+
         $stats = [
-            'total_participations' => $event->jobFairParticipations()->count(),
-            'total_job_profiles' => $event->jobFairParticipations()->withCount('jobProfiles')->get()->sum('job_profiles_count'),
-            'total_interviews' => $event->interviewRequests()->count(),
+            'total_participations' => $totalParticipations,
+            'total_job_profiles' => $totalJobProfiles,
+            'total_interviews_requests' => $totalInterviews,
+            'approved_interviews' => $approvedInterviews,
             'participating_companies' => $companies,
+            'approved_companies' => $approvedCompanies,
         ];
 
         return $this->sendResponse($stats, 'Statistics retrieved successfully.');

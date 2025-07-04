@@ -4,11 +4,13 @@ namespace App\Jobs;
 
 use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Models\Auth\User;
+use App\Models\NotificationsAndMessaging\BulkMessage ;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class SendBulkMessages implements ShouldQueue
 {
@@ -42,7 +44,7 @@ class SendBulkMessages implements ShouldQueue
                 $this->message->increment('sent_count');
             } catch (\Exception $e) {
                 $this->message->increment('failed_count');
-                \Log::error('Bulk message failed for user ' . $user->id, [
+                Log::error('Bulk message failed for user ' . $user->id, [
                     'error' => $e->getMessage(),
                 ]);
             }
