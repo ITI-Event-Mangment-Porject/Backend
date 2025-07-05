@@ -31,6 +31,8 @@ use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
 
+use App\Http\Controllers\AIInsightsController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -250,7 +252,7 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
     Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
     // AI-powered feedback analysis
     Route::post('/events/{eventId}/analyze', [AIInsightsController::class, 'generateInsights'])
-        ->middleware(RoleMiddleware::class . ':admin');
+        ->middleware('check.any.role:admin');
 });
 
 // Notifications Routes 
@@ -288,29 +290,24 @@ Route::prefix('events/{event}/insights')->middleware(['auth', 'role:admin'])->gr
 });
 
 // AI Insights Routes
-
 Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
+    
     // Generate AI insights for event feedback (Admin only)
     Route::post('/events/{eventId}/generate', [AIInsightsController::class, 'generateInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.generate');
+    
     // Get AI insights for specific event (All authenticated users)
-    Route::get('/events/{eventId}', [AIInsightsController::class, 'show'])
+    Route::get('/events/{eventId}', [AIInsightsController::class, 'getInsights'])
         ->name('ai.insights.show');
-    // List all events with insights (Admin only)
-    Route::get('/', [AIInsightsController::class, 'index'])
+    
+    // Get all AI insights (Admin only)
+    Route::get('/', [AIInsightsController::class, 'getAllInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.index');
-    // Update AI insights (Admin only)
-    Route::put('/{insightId}', [AIInsightsController::class, 'update'])
-        ->middleware(RoleMiddleware::class . ':admin')
-        ->name('ai.insights.update');
-    // Delete AI insights (Admin only)
-    Route::delete('/{insightId}', [AIInsightsController::class, 'destroy'])
-        ->middleware(RoleMiddleware::class . ':admin')
-        ->name('ai.insights.destroy');
-    // Get insights trends and analytics (Admin only)
-    Route::get('/trends/analysis', [AIInsightsController::class, 'trends'])
+    
+    // Delete AI insights for specific event (Admin only)
+    Route::delete('/events/{eventId}', [AIInsightsController::class, 'deleteInsights'])
         ->middleware('check.any.role:admin')
-        ->name('ai.insights.trends');
+        ->name('ai.insights.delete');
 });

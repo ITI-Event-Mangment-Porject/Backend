@@ -3,117 +3,101 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use App\Models\Event\Event;
 use App\Models\FeedbackAndAnalytics\FeedbackResponse;
-use App\Models\FeedbackAndAnalytics\AiInsight;
 
 class TestAISetup extends Command
 {
     protected $signature = 'ai:test-setup';
-    protected $description = 'Test AI insights setup and show system status';
+    protected $description = 'Test AI setup and configuration for Groq';
 
-    public function handle(): int
+    public function handle()
     {
-        $this->info('🤖 AI Insights Setup Test');
+        $this->info('🧪 Testing AI Setup for ITIVENT...');
         $this->newLine();
 
-        // Check OpenAI configuration
-        $this->checkOpenAIConfig();
-        
-        // Check database tables
-        $this->checkDatabaseTables();
-        
-        // Check sample data
-        $this->checkSampleData();
-        
-        // Show next steps
-        $this->showNextSteps();
-
-        return self::SUCCESS;
-    }
-
-    private function checkOpenAIConfig(): void
-    {
-        $this->info('1. Checking OpenAI Configuration...');
-        
-        $apiKey = config('openai.api_key') ?? env('OPENAI_API_KEY');
-        
-        if ($apiKey) {
-            $maskedKey = substr($apiKey, 0, 7) . '...' . substr($apiKey, -4);
-            $this->line("   ✅ API Key configured: {$maskedKey}");
-        } else {
-            $this->line("   ❌ API Key not found");
-            $this->warn("   💡 Add OPENAI_API_KEY=your_key_here to your .env file");
+        // Test 1: Check Groq API Key
+        $this->info('1️⃣ Checking Groq API Key...');
+        if (!env('GROQ_API_KEY')) {
+            $this->error('   ❌ GROQ_API_KEY not found in .env file');
+            $this->info('   💡 Get your free API key at: https://console.groq.com/');
+            return 1;
         }
-        
-        $this->newLine();
-    }
+        $this->info('   ✅ Groq API key is configured');
 
-    private function checkDatabaseTables(): void
-    {
-        $this->info('2. Checking Database Tables...');
-        
-        $tables = [
-            'events' => Event::class,
-            'feedback_responses' => FeedbackResponse::class,
-            'ai_insights' => AiInsight::class,
-        ];
+        // Test 2: Test Groq API Connection
+        $this->info('2️⃣ Testing Groq API Connection...');
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . env('GROQ_API_KEY'),
+                'Content-Type' => 'application/json',
+            ])->timeout(10)->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => 'llama3-8b-8192',
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => 'Hello, this is a test message. Please respond with "API connection successful".'
+                    ]
+                ],
+                'max_tokens' => 50,
+            ]);
 
-        foreach ($tables as $tableName => $model) {
-            try {
-                $count = $model::count();
-                $this->line("   ✅ {$tableName}: {$count} records");
-            } catch (\Exception $e) {
-                $this->line("   ❌ {$tableName}: Error - {$e->getMessage()}");
+            if ($response->successful()) {
+                $this->info('   ✅ Groq API connection successful');
+                $responseData = $response->json();
+                if (isset($responseData['choices'][0]['message']['content'])) {
+                    $this->info('   📝 Response: ' . trim($responseData['choices'][0]['message']['content']));
+                }
+            } else {
+                $this->error('   ❌ Groq API connection failed: ' . $response->body());
+                return 1;
+            }
+        } catch (\Exception $e) {
+            $this->error('   ❌ Groq API test failed: ' . $e->getMessage());
+            return 1;
+        }
+
+        // Test 3: Check Database Tables
+        $this->info('3️⃣ Checking Database Tables...');
+        try {
+            $eventCount = Event::count();
+            $feedbackCount = FeedbackResponse::count();
+            
+            $this->info("   ✅ Events table: {$eventCount} records");
+            $this->info("   ✅ Feedback responses table: {$feedbackCount} records");
+            
+            if ($feedbackCount === 0) {
+                $this->warn('   ⚠️  No feedback responses found - you may need sample data');
+            }
+        } catch (\Exception $e) {
+            $this->error('   ❌ Database check failed: ' . $e->getMessage());
+            return 1;
+        }
+
+        // Test 4: Check Events with Feedback
+        $this->info('4️⃣ Checking Events with Feedback...');
+        $eventsWithFeedback = Event::whereHas('feedbackResponses')->get(['id', 'title']);
+        
+        if ($eventsWithFeedback->isEmpty()) {
+            $this->warn('   ⚠️  No events found with feedback responses');
+            $this->info('   💡 You may need to create sample feedback data for testing');
+        } else {
+            $this->info("   ✅ Found {$eventsWithFeedback->count()} events with feedback:");
+            foreach ($eventsWithFeedback as $event) {
+                $feedbackCount = $event->feedbackResponses()->count();
+                $this->info("      • Event {$event->id}: {$event->title} ({$feedbackCount} responses)");
             }
         }
-        
-        $this->newLine();
-    }
 
-    private function checkSampleData(): void
-    {
-        $this->info('3. Checking Sample Data...');
-        
-        $eventsWithFeedback = Event::whereHas('feedbackResponses')->count();
-        $totalFeedback = FeedbackResponse::count();
-        $existingInsights = AiInsight::count();
-        
-        $this->line("   📊 Events with feedback: {$eventsWithFeedback}");
-        $this->line("   💬 Total feedback responses: {$totalFeedback}");
-        $this->line("   🤖 Existing AI insights: {$existingInsights}");
-        
-        if ($eventsWithFeedback === 0) {
-            $this->warn("   ⚠️  No events with feedback found");
-            $this->line("   💡 Create some test feedback to try AI insights");
-        }
-        
         $this->newLine();
-    }
-
-    private function showNextSteps(): void
-    {
-        $this->info('4. Next Steps:');
-        
-        $eventsWithFeedback = Event::whereHas('feedbackResponses')->with('feedbackResponses')->get();
+        $this->info('🎉 AI Setup Test Complete!');
         
         if ($eventsWithFeedback->isNotEmpty()) {
-            $this->line('   🚀 Ready to test! Try these commands:');
-            
-            foreach ($eventsWithFeedback->take(3) as $event) {
-                $feedbackCount = $event->feedbackResponses->count();
-                $this->line("   php artisan insights:generate {$event->id}  # {$event->title} ({$feedbackCount} feedback)");
-            }
-        } else {
-            $this->line('   📝 Create test data first:');
-            $this->line('   php artisan db:seed --class=FeedbackResponseSeeder');
-            $this->line('   php artisan insights:generate 1');
+            $firstEvent = $eventsWithFeedback->first();
+            $this->info("💡 Try running: php artisan insights:generate {$firstEvent->id}");
         }
-        
-        $this->newLine();
-        $this->line('   📚 API endpoints:');
-        $this->line('   POST /api/ai-insights/events/{id}/generate');
-        $this->line('   GET  /api/ai-insights/events/{id}');
-        $this->line('   GET  /api/ai-insights');
+
+        return 0;
     }
 }
