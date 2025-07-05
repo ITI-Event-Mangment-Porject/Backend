@@ -24,6 +24,7 @@ class CompanyController extends BaseApiController
         try {
             $data = $request->validated();
             $data['is_approved']=false;
+            $data['status']='pending';
             $company = Company::create($data);
             return $this->sendResponse($company, 'Company created successfully',201);
         } catch (Exception $e) {
@@ -104,6 +105,7 @@ class CompanyController extends BaseApiController
                 return response()->json(['message' => 'company is Not Found'], 404);
             }
             $company->is_approved = true;
+            $company->status='approved';
             $company->approved_by = Auth::user() ?? 2;
             $company->approved_at = now();
             $company->save();
@@ -124,6 +126,7 @@ class CompanyController extends BaseApiController
             }
 
             $company->is_approved = false;
+            $company->status = 'rejected';
             $company->approved_by = Auth::id() ?? 2;
             $company->approved_at = now();
             $company->save();

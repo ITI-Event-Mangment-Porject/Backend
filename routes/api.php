@@ -144,7 +144,6 @@ Route::prefix('auth')->group(function () {
     
     
     
-    
 
     //companyController still need admin middleware 
     Route::prefix('companies')->group(function () {
