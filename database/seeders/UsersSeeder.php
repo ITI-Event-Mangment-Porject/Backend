@@ -10,47 +10,54 @@ class UsersSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create admin users
-        $adminTrack = Track::first();
+        // Ensure roles exist before assigning them
+        // You should have a RolePermissionSeeder that creates these roles
         
-        User::factory()->create([
+        // Create admin user
+        User::factory()->staff()->create([
             'portal_user_id' => 'ADMIN001',
             'email' => 'admin@itivent.com',
             'first_name' => 'System',
             'last_name' => 'Administrator',
-            'track_id' => null,
-            'intake_year' => null,
-            'graduation_year' => null,
-        ]);
+            'branch' => 'Cairo',
+        ])->assignRole('admin');
 
-        User::factory()->create([
+        // Create a specific staff user
+        User::factory()->staff()->create([
             'portal_user_id' => 'STAFF001',
             'email' => 'staff@itivent.com',
             'first_name' => 'Event',
             'last_name' => 'Coordinator',
-            'track_id' => null,
-            'intake_year' => null,
-            'graduation_year' => null,
-        ]);
+            'branch' => 'Cairo',
+        ])->assignRole('staff');
+
+        // Create general staff members (branch is assigned automatically by the factory)
+        User::factory(5)->staff()->create()->each(function ($user) {
+            $user->assignRole('staff');
+        });
 
         // Create students for each track
         $tracks = Track::all();
-        foreach ($tracks as $track) {
-            User::factory(15)->create([
-                'track_id' => $track->id,
-                'intake_year' => fake()->numberBetween(2020, 2024),
-                'graduation_year' => fake()->numberBetween(2024, 2026),
-            ]);
+        if ($tracks->isEmpty()) {
+            // Create a fallback track if none exist
+            $tracks = Track::factory(1)->create();
         }
 
-        // Create some alumni
-        User::factory(20)->create([
+        foreach ($tracks as $track) {
+            User::factory(15)->student()->create([
+                'track_id' => $track->id,
+            ])->each(function ($user) {
+                $user->assignRole('student');
+            });
+        }
+
+        // Create some alumni (who are also students in terms of roles for this system)
+        User::factory(20)->student()->create([
             'track_id' => $tracks->random()->id,
             'intake_year' => fake()->numberBetween(2018, 2022),
             'graduation_year' => fake()->numberBetween(2022, 2024),
-        ]);
-
-        // Create staff members
-        User::factory(5)->staff()->create();
+        ])->each(function ($user) {
+            $user->assignRole('student');
+        });
     }
 }
