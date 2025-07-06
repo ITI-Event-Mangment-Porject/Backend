@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\API\Events;
 
 use App\Http\Controllers\API\BaseApiController;
+use App\Models\Auth\User;
+use App\Models\Company\Company;
 use App\Models\Event\Event;
 use App\Http\Requests\Events\StoreJobFairRequest;
 use App\Http\Requests\Events\UpdateJobFairRequest;
+use App\Models\JobFair\JobFairParticipation;
+use App\Notifications\NewJobFairCreated;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class JobFairController extends BaseApiController
 {
@@ -65,11 +70,28 @@ class JobFairController extends BaseApiController
 
             $event = Event::create([
                 ...$validated,
-                'slug' => Str::slug($validated['title']) . '-' . Str::random(5),
+                'slug' => \Str::slug($validated['title']) . '-' . \Str::random(5),
                 'type' => 'Job Fair',
                 'status' => 'draft',
                 'created_by' => $validated['created_by'] ?? auth()->id()
             ]);
+
+            // Notify all companies
+            $companies = Company::all();
+            foreach ($companies as $company) {
+                if ($company->contact_email) {
+                    $company->notify(new NewJobFairCreated($event));
+                }
+            }
+
+            // Notify all users with company_representative role
+            $companyReps = User::whereHas('roles', function ($q) {
+                $q->where('name', 'company_representative');
+            })->get();
+
+            foreach ($companyReps as $user) {
+                $user->notify(new NewJobFairCreated($event));
+            }
 
             return $this->sendResponse($event, 'Job Fair created in draft status.', 201);
         } catch (\Exception $e) {

@@ -52,4 +52,8 @@ class Company extends Model
     {
         return $this->hasMany(InterviewQueue::class);
     }
+    public function routeNotificationForMail($notification = null)
+    {
+        return $this->contact_email;
+    }
 }
