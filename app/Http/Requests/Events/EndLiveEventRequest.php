@@ -12,7 +12,7 @@ class EndLiveEventRequest extends BaseApiRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         // Allow for now - you can add your own authorization logic here
         return true;
@@ -21,7 +21,7 @@ class EndLiveEventRequest extends BaseApiRequest
      *
      * @return array<string, mixed>
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             // Optional: Update the actual end time when ending the event
@@ -37,7 +37,7 @@ class EndLiveEventRequest extends BaseApiRequest
      *
      * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'end_reason.max' => 'The end reason cannot exceed 500 characters.',
