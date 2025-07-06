@@ -5,6 +5,7 @@ namespace App\Http\Requests\Events;
 use App\Http\Requests\BaseApiRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use PhpParser\Node\Expr\BinaryOp\BooleanAnd;
 
 class EndLiveEventRequest extends BaseApiRequest
 {    /**

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-
-
 use App\Http\Requests\StoreCompanyRequest;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -23,9 +21,10 @@ class CompanyController extends BaseApiController
     {
         try {
             $data = $request->validated();
-            $data['is_approved']=false;
+            $data['is_approved'] = false;
+            $data['status'] = 'pending';
             $company = Company::create($data);
-            return $this->sendResponse($company, 'Company created successfully',201);
+            return $this->sendResponse($company, 'Company created successfully', 201);
         } catch (Exception $e) {
             return $this->sendError('Failed to create company', ['error' => $e->getMessage()], 500);
         }
@@ -104,6 +103,8 @@ class CompanyController extends BaseApiController
                 return response()->json(['message' => 'company is Not Found'], 404);
             }
             $company->is_approved = true;
+            $company->status = 'approved';
+            $company->reason = null;
             $company->approved_by = Auth::user() ?? 2;
             $company->approved_at = now();
             $company->save();
@@ -115,24 +116,27 @@ class CompanyController extends BaseApiController
         }
 
     }
-    public function reject($id)
+    public function reject(Request $request, $id)
     {
+        $request->validate([
+            'reason' => 'required|string|min:5',
+        ]);
+
         try {
             $company = Company::findOrFail($id);
-            if (!$company) {
-                return response()->json(['message' => 'company is Not Found'], 404);
-            }
 
             $company->is_approved = false;
+            $company->status = 'rejected';
+            $company->reason = $request->reason; 
             $company->approved_by = Auth::id() ?? 2;
             $company->approved_at = now();
             $company->save();
 
-            return $this->sendResponse($company, 'Company Rejected successfully', 200);
+            return $this->sendResponse($company, 'Company rejected successfully', 200);
         } catch (ModelNotFoundException $e) {
             return $this->sendError('Company Not Found', ['error' => 'Company Model Not Found'], 404);
         } catch (Exception $e) {
-            return $this->sendError('Reject Field', ['error' => $e->getMessage()], 500);
+            return $this->sendError('Reject Failed', ['error' => $e->getMessage()], 500);
         }
     }
 
