@@ -8,11 +8,12 @@ use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Notifications\Notifiable;
 
 class Company extends Model
 {
     //
-    use HasFactory;
+    use HasFactory,Notifiable ;
     protected $fillable = [
         'name', 'logo_path', 'description', 'website', 'industry',
         'size', 'location', 'contact_email', 'contact_phone', 
@@ -50,5 +51,9 @@ class Company extends Model
     public function interviewQueues()
     {
         return $this->hasMany(InterviewQueue::class);
+    }
+    public function routeNotificationForMail($notification = null)
+    {
+        return $this->contact_email;
     }
 }

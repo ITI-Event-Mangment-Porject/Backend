@@ -100,8 +100,10 @@ Route::prefix('auth')->group(function () {
     |--------------------------------------------------------------------------
     |
     */
+    Route::get('events/', [EventController::class, 'index']); // List all events
+    Route::get('events/{event_flexible}/sessions', [EventSessionController::class, 'index']);
+    
 Route::middleware(['auth:api'])->prefix('events')->group(function () {
-    Route::get('/', [EventController::class, 'index']); // List all events
     Route::post('/', [EventController::class, 'store']);
 
     // Specific routes FIRST (these need to come before the generic /{event_flexible})
@@ -131,7 +133,6 @@ Route::middleware(['auth:api'])->prefix('events')->group(function () {
 
 
     /* Event Sessions */
-    Route::get('/{event_flexible}/sessions', [EventSessionController::class, 'index']);
     Route::post('/{event_flexible}/sessions', [EventSessionController::class, 'createSession'])->middleware('check.any.role:admin,staff'); // Create a new session (admin/staff only)
     Route::get('/{event_flexible}/sessions/{session}', [EventSessionController::class, 'show']);
 
