@@ -13,6 +13,7 @@ use App\Notifications\NewJobFairCreated;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 class JobFairController extends BaseApiController
 {
@@ -68,6 +69,11 @@ class JobFairController extends BaseApiController
         try {
             $validated = $request->validated();
 
+            if ($request->hasFile('banner_image')) {
+                $path = $request->file('banner_image')->store('public/event_banners');
+                $validated['banner_image'] = $path;
+            }
+
             $event = Event::create([
                 ...$validated,
                 'slug' => \Str::slug($validated['title']) . '-' . \Str::random(5),
@@ -109,6 +115,15 @@ class JobFairController extends BaseApiController
 
         try {
             $validated = $request->validated();
+
+            if ($request->hasFile('banner_image')) {
+                // Delete the old banner if it exists
+                if ($event->banner_image) {
+                    Storage::delete($event->banner_image);
+                }
+                $path = $request->file('banner_image')->store('public/event_banners');
+                $validated['banner_image'] = $path;
+            }
 
             if (isset($validated['title'])) {
                 $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(5);
