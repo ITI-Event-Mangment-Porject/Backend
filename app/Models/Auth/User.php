@@ -49,6 +49,11 @@ class User extends Authenticatable implements JWTSubject
         'graduation_year',
         'is_active',
         'last_login_at',
+        'program',
+        'intake',
+        'round',
+        'intake_year',
+        'branch',
         
     ];
 
@@ -72,7 +77,9 @@ class User extends Authenticatable implements JWTSubject
         'last_login_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'intake' => 'integer',
         'intake_year' => 'integer',
+        'round' => 'integer',
         'graduation_year' => 'integer',
     ];
     protected static function newFactory()
@@ -155,4 +162,22 @@ class User extends Authenticatable implements JWTSubject
     {
         return []; // Add custom claims if needed
     }
+    
+    public function isAdmin()
+    {
+        return $this->hasRole('admin');
+    }
+    public function isStaff()
+    {
+        return $this->hasRole('staff');
+    }
+    public function isStudent()
+    {
+        return $this->hasRole('student');
+    }
+    public function isCompany()
+    {
+        return $this->hasRole('company_representative');
+    }
+    
 }

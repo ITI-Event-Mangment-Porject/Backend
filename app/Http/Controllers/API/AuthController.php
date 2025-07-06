@@ -13,6 +13,7 @@ use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use App\Http\Controllers\API\BaseApiController;
 use App\Http\Requests\LoginRequest;
+use App\Models\Company\Company;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ConnectException;
@@ -108,6 +109,20 @@ class AuthController extends BaseApiController
             
             if (!$user) {
                 // Create new user
+                if($user->isCompany()) {
+                    $user = User::create([
+                        'portal_user_id' => $userData['id'],
+                        'email' => $userData['email'],
+                    ]);
+                        
+                    $user = Company::create([
+                        'name' => $userData['first_name'] . ' ' . $userData['last_name'], // Assuming company name is a combination of first and last name
+                        'phone' => $userData['phone'] ?? null,
+                        'profile_image' => $userData['profile_image'] ?? null,
+                    ]);
+                    $user->assignRole('company'); // Assign company role
+                } else {
+                    // Create a new user record
                 $user = User::create([
                     'portal_user_id' => $userData['id'],
                     'email' => $userData['email'],
@@ -125,7 +140,7 @@ class AuthController extends BaseApiController
                     'profile_image' => $userData['profile_image'] ?? null,
                 ]);
                 $user->assignRole($role);
-                
+            }
                 $accessToken = JWTAuth::fromUser($user);
                 $refreshToken = JWTAuth::customClaims([
                     'type' => 'refresh',
