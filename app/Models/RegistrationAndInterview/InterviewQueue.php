@@ -28,6 +28,8 @@ class InterviewQueue extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+
     protected static function newFactory()
     {
         return \Database\Factories\InterviewQueueFactory::new();

@@ -18,7 +18,30 @@ class EventSessionFactory extends Factory
             'description' => $this->faker->optional()->paragraph(),
             'speaker_name' => $this->faker->optional()->name(),
             'speaker_bio' => $this->faker->optional()->paragraph(2),
-            'speaker_image' => $this->faker->optional()->imageUrl(200, 200, 'people'),
+            'speaker_image' => function () {
+                $imageName = uniqid('speaker_') . '.png';
+                $imagePath = 'events/sessions/speakers/' . $imageName;
+
+                // Create a dummy image
+                $width = 200;
+                $height = 200;
+                $image = imagecreatetruecolor($width, $height);
+                $backgroundColor = imagecolorallocate($image, 200, 200, 200); // Light gray
+                $textColor = imagecolorallocate($image, 0, 0, 0); // Black
+                imagefill($image, 0, 0, $backgroundColor);
+                imagestring($image, 5, ($width / 2) - 30, ($height / 2) - 10, 'Speaker', $textColor);
+
+                // Get image contents
+                ob_start();
+                imagepng($image);
+                $imageContents = ob_get_clean();
+                imagedestroy($image);
+
+                // Store the dummy image
+                \Illuminate\Support\Facades\Storage::disk('public')->put($imagePath, $imageContents);
+
+                return '/storage/' . $imagePath;
+            },
             'start_time' => $this->faker->time('H:i:s'),
             'end_time' => $this->faker->time('H:i:s'),
             'location' => $this->faker->optional()->address(),

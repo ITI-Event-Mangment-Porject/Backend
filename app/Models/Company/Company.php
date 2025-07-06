@@ -22,6 +22,7 @@ class Company extends Model
 
     protected $casts = [
         'is_approved' => 'boolean',
+        'status' => 'string',
         'approved_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

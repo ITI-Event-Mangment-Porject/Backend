@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\RegistrationAndInterview\InterviewQueue;
 use App\Models\JobFair\InterviewSlot;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 
 class InterviewQueueController extends BaseApiController
 {
@@ -240,7 +241,7 @@ class InterviewQueueController extends BaseApiController
                 ->firstOrFail();
 
             $data = $request->validate([
-                'queue_position' => 'sometimes|integer|min:1',
+                'queue_position' => 'sometimes|integer|min:0',
                 'status' => 'sometimes|in:waiting,in_interview,completed,skipped,cancelled',
                 'notes' => 'nullable|string',
             ]);
@@ -280,6 +281,140 @@ class InterviewQueueController extends BaseApiController
             return $this->sendError('Queue entry not found.');
         } catch (\Exception $e) {
             return $this->sendError('An error occurred while removing the queue entry.', [$e->getMessage()], 500);
+        }
+    }
+
+    public function pending(Request $request, $jobFairId, $queueId)
+    {
+        return $this->updateStatus($jobFairId, $queueId, 'pending');
+    }
+
+    public function resume(Request $request, $jobFairId, $queueId)
+    {
+        return $this->updateStatus($jobFairId, $queueId, 'waiting');
+    }
+
+    public function next(Request $request, $jobFairId, $slotId)
+    {
+        // Start a database transaction to ensure all or nothing is updated.
+        DB::beginTransaction();
+
+        try {
+            // 1. Find the current student in the interview for this slot (if any)
+            $currentInterview = InterviewQueue::where('slot_id', $slotId)
+                ->where('status', 'in_interview')
+                ->first();
+
+            // 2. If a student is already in an interview, mark them as completed.
+            if ($currentInterview) {
+                $currentInterview->update([
+                    'status' => 'completed',
+                    'queue_position' => 0, // Reset their position to 0 since they are now in interview
+                    'notes' => 'Interview completed.',
+                    'interview_ended_at' => now(),
+                ]);
+            }
+
+            // 3. Find the next student in the queue for this slot.
+            $nextStudent = InterviewQueue::where('slot_id', $slotId)
+                ->where('status', 'waiting')
+                ->orderBy('queue_position', 'asc')
+                ->first();
+
+            // If there is no one left in the queue, commit and return.
+            if (!$nextStudent) {
+                DB::commit();
+                return $this->sendResponse([], 'No students left in the queue.');
+            }
+
+            // 4. Update the next student's status to 'in_interview'.
+            $nextStudent->update([
+                'status' => 'in_interview',
+                'queue_position' => 0, // Reset their position to 0 since they are now in interview
+                'interview_started_at' => now(),
+            ]);
+
+            // 5. Decrement the queue position for all other waiting students in this slot.
+            InterviewQueue::where('slot_id', $slotId)
+                ->where('status', 'waiting')
+                ->where('id', '!=', $nextStudent->id) // Exclude the student now in interview
+                ->decrement('queue_position');
+
+
+            DB::commit();
+
+            // After the transaction, you would broadcast the queue update event here.
+            // For example: broadcast(new QueueUpdated($slotId))->toOthers();
+
+            return $this->sendResponse(
+                [
+                    'now_interviewing' => $nextStudent,
+                ],
+                'Next student called successfully. The queue has been updated.'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError('An error occurred while advancing the queue.', [$e->getMessage()], 500);
+        }
+    }
+
+    
+    
+
+    public function requeueLast(Request $request, $jobFairId, $queueId)
+    {
+        try {
+            $queueEntry = InterviewQueue::where('id', $queueId)
+                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
+                    $q->where('event_id', $jobFairId);
+                })
+                ->firstOrFail();
+
+            // Find the last position in the queue for this specific slot
+            $lastPosition = InterviewQueue::where('slot_id', $queueEntry->slot_id)->max('queue_position');
+
+            $queueEntry->update([
+                'status' => 'waiting',
+                'queue_position' => $lastPosition + 1,
+            ]);
+
+            return $this->sendResponse(
+                [
+                    'queue_id' => $queueEntry->id,
+                    'status' => $queueEntry->status,
+                    'queue_position' => $queueEntry->queue_position,
+                ],
+                'Student has been moved to the end of the queue.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Queue entry not found.');
+        } catch (\Exception $e) {
+            return $this->sendError('An error occurred while moving the student.', [$e->getMessage()], 500);
+        }
+    }
+
+    private function updateStatus($jobFairId, $queueId, $status)
+    {
+        try {
+            $queue = InterviewQueue::where('id', $queueId)
+                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
+                    $q->where('event_id', $jobFairId);
+                })
+                ->firstOrFail();
+
+            $queue->update(['status' => $status]);
+
+            return $this->sendResponse(
+                [
+                    'queue_id' => $queue->id,
+                    'status' => $queue->status,
+                ],
+                'Queue entry updated successfully.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Queue entry not found.');
+        } catch (\Exception $e) {
+            return $this->sendError('An error occurred while updating the queue entry.', [$e->getMessage()], 500);
         }
     }
 }
