@@ -25,10 +25,14 @@ class UserFactory extends Factory
             'github_url' => $this->faker->optional()->url(),
             'portfolio_url' => $this->faker->optional()->url(),
             'track_id' => Track::inRandomOrder()->first()->id ?? Track::factory()->create()->id,
-            'intake_year' => $this->faker->optional()->numberBetween(2020, 2024),
+            'intake' => $this->faker->optional()->numberBetween(45, 46),
+            'intake_year' => $this->faker->optional()->numberBetween(2024, 2026),
+            'round' => $this->faker->optional()->numberBetween(1, 3),
             'graduation_year' => $this->faker->optional()->numberBetween(2024, 2026),
             'is_active' => $this->faker->boolean(95),
             'last_login_at' => $this->faker->optional()->dateTimeBetween('-1 month'),
+            'program' => $this->faker->randomElement(['PTP','ITP']),
+            'branch' => $this->faker->optional()->randomElement(['Cairo', 'Alexandria', 'Mansoura','Tanta','Menofia']),
         ];
     }
 
@@ -44,6 +48,8 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'track_id' => null,
+            'intake' => null,
+            'round' => null,
             'intake_year' => null,
             'graduation_year' => null,
         ]);
