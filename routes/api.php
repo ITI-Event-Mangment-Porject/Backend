@@ -299,7 +299,13 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
     
     // Get AI insights for specific event (All authenticated users)
     Route::get('/events/{eventId}', [AIInsightsController::class, 'getInsights'])
+        ->middleware('check.any.role:admin')
         ->name('ai.insights.show');
+
+    // Get detailed AI insights with full analysis data
+    Route::get('/events/{eventId}/detailed', [AIInsightsController::class, 'getDetailedInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.detailed');
     
     // Get all AI insights (Admin only)
     Route::get('/', [AIInsightsController::class, 'getAllInsights'])
