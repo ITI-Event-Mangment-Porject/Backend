@@ -223,6 +223,10 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store'])->middleware('role:admin');
     Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update'])->middleware('role:admin');
     Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy'])->middleware('role:admin');
+    // Branding Day Speakers Routes
+    Route::post('/{jobFairId}/participations/{participationId}/speakers', [BrandingDayController::class, 'storeSpeaker'])->middleware('role:company_representative'); // Store one speaker for a participation
+    Route::get('/{jobFairId}/participations/{participationId}/speaker', [BrandingDayController::class, 'showSpeakerForParticipation'])->middleware('check.any.role:admin,staff,company_representative'); // Get speaker for a specific participation
+    Route::get('/{jobFairId}/speakers', [BrandingDayController::class, 'indexAllSpeakersForJobFair'])->middleware('check.any.role:admin,staff'); // Get all speakers for a job fair
 
     Route::get('{jobFairId}/queues/slot/{slotId}', [InterviewQueueController::class, 'slotQueue'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('{jobFairId}/queues/company/{companyId}', [InterviewQueueController::class, 'companyQueues'])->middleware('check.any.role:admin,staff,company_representative');
