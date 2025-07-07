@@ -31,7 +31,11 @@ use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
 
+use App\Models\Auth\User;
+
+
 use App\Http\Controllers\AIInsightsController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -262,8 +266,8 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
-        ;
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin') ;
+    Route::get('/all', [NotificationController::class, 'allNotifications'])->middleware(['auth:api', RoleMiddleware::class.':admin']);
 });
 
 // Bulk Messages Routes 
@@ -327,3 +331,4 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
 });
+
