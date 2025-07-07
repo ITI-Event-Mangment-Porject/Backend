@@ -12,7 +12,7 @@ class StartLiveEventRequest extends BaseApiRequest
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
         // Allow for now - you can add your own authorization logic here
         return true;
@@ -21,7 +21,7 @@ class StartLiveEventRequest extends BaseApiRequest
      *
      * @return array<string, mixed>
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             // Optional: Update the actual start time when starting the event
@@ -36,7 +36,7 @@ class StartLiveEventRequest extends BaseApiRequest
      *
      * @return array
      */
-    public function messages()
+    public function messages(): array
     {
         return [
             'custom_start_message.max' => 'The custom start message cannot exceed 500 characters.',
