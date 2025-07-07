@@ -191,11 +191,11 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::post('/', [JobFairController::class, 'store'])->middleware('role:admin');
     Route::put('/{jobFairId}', [JobFairController::class, 'update'])->middleware('role:admin');
     Route::delete('/{jobFairId}', [JobFairController::class, 'destroy'])->middleware('role:admin');
-    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('/{jobFairId}/statistics', [JobFairController::class, 'statistics'])->middleware('check.any.role:admin,staff');
 
     Route::post('/{jobFairId}/participate', [JobFairParticipationController::class, 'store'])->middleware('role:company_representative');
-    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'show'])->middleware( 'check.any.role:admin,staff,company_representative');
     Route::put('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'review'])->middleware('role:admin');
 
@@ -207,7 +207,7 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::delete('/job-profiles/{jobProfileId}', [JobProfileController::class, 'destroy'])->middleware('role:company_representative');
 
     Route::get('/{jobFairId}/interview-slots', [InterviewSlotController::class, 'jobFairSlots'])->middleware('role:admin');
-    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots'])->middleware('check.any.role:company_representative,admin,staff');
     Route::post('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'store'])->middleware('role:company_representative');
     Route::get('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'show'])->middleware('check.any.role:admin,staff,company_representative');
     Route::put('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'update'])->middleware('role:company_representative');
