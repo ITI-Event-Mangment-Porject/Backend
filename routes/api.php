@@ -31,7 +31,11 @@ use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
 
+use App\Models\Auth\User;
+
+
 use App\Http\Controllers\AIInsightsController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -219,6 +223,10 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::post('/{jobFairId}/branding-day/schedule', [BrandingDayController::class, 'store'])->middleware('role:admin');
     Route::put('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'update'])->middleware('role:admin');
     Route::delete('/{jobFairId}/branding-day/schedule/{scheduleId}', [BrandingDayController::class, 'destroy'])->middleware('role:admin');
+    // Branding Day Speakers Routes
+    Route::post('/{jobFairId}/participations/{participationId}/speakers', [BrandingDayController::class, 'storeSpeaker'])->middleware('role:company_representative'); // Store one speaker for a participation
+    Route::get('/{jobFairId}/participations/{participationId}/speaker', [BrandingDayController::class, 'showSpeakerForParticipation'])->middleware('check.any.role:admin,staff,company_representative'); // Get speaker for a specific participation
+    Route::get('/{jobFairId}/speakers', [BrandingDayController::class, 'indexAllSpeakersForJobFair'])->middleware('check.any.role:admin,staff'); // Get all speakers for a job fair
 
     Route::get('{jobFairId}/queues/slot/{slotId}', [InterviewQueueController::class, 'slotQueue'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('{jobFairId}/queues/company/{companyId}', [InterviewQueueController::class, 'companyQueues'])->middleware('check.any.role:admin,staff,company_representative');
@@ -262,8 +270,8 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
-    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin')
-        ;
+    Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin') ;
+    Route::get('/all', [NotificationController::class, 'allNotifications'])->middleware(['auth:api', RoleMiddleware::class.':admin']);
 });
 
 // Bulk Messages Routes 
@@ -327,3 +335,4 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
 });
+

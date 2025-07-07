@@ -56,4 +56,14 @@ class JobFairParticipation extends Model
     {
         return $this->hasMany(InterviewSlot::class, 'participation_id');
     }
+
+    public function brandingDaySpeakers()
+    {
+        return $this->hasMany(BrandingDaySpeaker::class, 'job_fair_participation_id');
+    }
+
+    public function brandingDaySchedules()
+    {
+        return $this->hasMany(BrandingDaySchedule::class, 'participation_id');
+    }
 }

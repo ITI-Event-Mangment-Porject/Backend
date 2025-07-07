@@ -16,13 +16,13 @@ class InterviewQueue extends Model
     protected $table = 'interview_queue';
 
     protected $fillable = [
-        'interview_request_id', 'company_id', 'user_id', 'slot_id', 'queue_position',
+        'interview_request_id', 'company_id', 'user_id', 'slot_id', 'order_key',
         'status', 'interview_started_at', 'interview_ended_at',
         'notes', 'updated_by'
     ];
 
     protected $casts = [
-        'queue_position' => 'integer',
+        'order_key' => 'double',
         'interview_started_at' => 'datetime',
         'interview_ended_at' => 'datetime',
         'created_at' => 'datetime',
