@@ -5,9 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\FirestoreService; // Assuming you have a FirestoreService for Firebase notifications
 
 class NotificationController extends Controller
 {
+    protected $firebase;
+    public function __construct(FirestoreService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
+     
     /**
      * Get all notifications for the authenticated user
      * GET /notifications
@@ -101,6 +108,12 @@ class NotificationController extends Controller
             'is_read' => false,
             'sent_via' => json_encode(['in-app']),
         ]);
+
+         $this->firebase->send($data['user_id'], [
+            'title' => 'New Feedback Form',
+            'body' => 'A new feedback form has been created for the event: ',
+            'type' => 'feedback_form',
+]);
 
         return response()->json([
             'message' => 'Notification sent successfully by admin.',
