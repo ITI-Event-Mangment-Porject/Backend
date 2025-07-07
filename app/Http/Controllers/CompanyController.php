@@ -85,7 +85,8 @@ class CompanyController extends BaseApiController
     {
         try {
             $company = Company::findOrFail($id);
-            $data = $request->validated();
+            $data = $request->except(['email']);
+
             $company->update($data);
             return $this->sendResponse($company->fresh(), 'Company updated successfully', 200);
         } catch (ModelNotFoundException $e) {
@@ -93,7 +94,6 @@ class CompanyController extends BaseApiController
         } catch (Exception $e) {
             return $this->sendError('Failed to update company', ['error' => $e->getMessage()], 500);
         }
-
     }
     public function approve($id)
     {
@@ -127,7 +127,7 @@ class CompanyController extends BaseApiController
 
             $company->is_approved = false;
             $company->status = 'rejected';
-            $company->reason = $request->reason; 
+            $company->reason = $request->reason;
             $company->approved_by = Auth::id() ?? 2;
             $company->approved_at = now();
             $company->save();
