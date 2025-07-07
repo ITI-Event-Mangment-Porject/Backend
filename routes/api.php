@@ -54,7 +54,7 @@ Route::get('/test-connection', function () {
 });
 
 // Test routes for User API endpoints (no authentication required)
-Route::prefix('test/users')->group(function () {
+Route::middleware(['auth:api'])->prefix('/users')->group(function () {
     Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
     Route::post('/', [UserController::class, 'store']);               // Test creating a user
     Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
