@@ -65,7 +65,7 @@ class AuthController extends BaseApiController
                     'token' => 'mocked_token',
                     'user' => [
                             'id' => 'PU48494',
-                            'role' => 'admin',
+                            'role' => 'student', // admin or student or company_representative
                             'email' => $email,
                             'first_name' => 'admin',
                             'last_name' => 'admin',

@@ -70,8 +70,8 @@ Route::prefix('test/tracks')->group(function () {
 // Test routes for LiveEvent API endpoints (no authentication required for testing)
 Route::prefix('test/live')->group(function () {
     Route::get('/events/{id}/status', [LiveEventController::class, 'status']);     // Get live status of an event
-    Route::post('/events/{id}/start', [LiveEventController::class, 'start']);      // Start a live event
-    Route::post('/events/{id}/end', [LiveEventController::class, 'end']);          // End a live event
+    Route::post('/events/{id}/start', [LiveEventController::class, 'start'])->middleware('check.any.role:admin');      // Start a live event
+    Route::post('/events/{id}/end', [LiveEventController::class, 'end'])->middleware('check.any.role:admin');          // End a live event
 });
 
 
