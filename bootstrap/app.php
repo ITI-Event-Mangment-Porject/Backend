@@ -21,5 +21,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         $schedule->command('interviews:assign-queues')->everyMinute();
         // I will change this to a more suitable frequency later like once a day
+        
+        // Add AI insights scheduling
+        $schedule->command('insights:generate --completed-only')
+            ->dailyAt('02:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     })
+    ->withCommands([
+        // Register AI insights commands
+        \App\Console\Commands\GenerateEventInsights::class,
+        \App\Console\Commands\TestAISetup::class,
+    ])
     ->create();
