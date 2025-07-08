@@ -21,6 +21,7 @@ class StoreBrandingDayScheduleRequest extends BaseApiRequest
             'schedule.*.start_time' => 'required|date_format:H:i',
             'schedule.*.end_time' => 'required|date_format:H:i|after:schedule.*.start_time',
             'schedule.*.order' => 'nullable|integer',
+            'schedule.*.speaker_id' => 'nullable|exists:branding_day_speakers,id', // Add speaker_id to schedule
         ];
     }
 
@@ -40,6 +41,7 @@ class StoreBrandingDayScheduleRequest extends BaseApiRequest
             'schedule.*.end_time.date_format' => 'End time must be in H:i format.',
             'schedule.*.end_time.after' => 'End time must be after start time.',
             'schedule.*.order.integer' => 'Order must be an integer.',
+            'schedule.*.speaker_id.exists' => 'The selected speaker does not exist.',
         ];
     }
 }

@@ -44,4 +44,7 @@ class Notification extends Model
             'read_at' => now()
         ]);
     }
+
+    
 }
+

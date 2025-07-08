@@ -51,6 +51,11 @@ class UsersSeeder extends Seeder
             });
         }
 
+        // Create company representative users
+        User::factory(10)->create()->each(function ($user) {
+            $user->assignRole('company_representative');
+        });
+
         // Create some alumni (who are also students in terms of roles for this system)
         User::factory(20)->student()->create([
             'track_id' => $tracks->random()->id,

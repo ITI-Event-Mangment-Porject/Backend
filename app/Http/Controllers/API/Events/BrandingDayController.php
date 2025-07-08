@@ -6,25 +6,32 @@ use App\Http\Controllers\API\BaseApiController;
 use Illuminate\Http\Request;
 use App\Models\JobFair\JobFairParticipation;
 use App\Models\JobFair\BrandingDaySchedule;
+use App\Models\JobFair\BrandingDaySpeaker;
 use App\Http\Requests\Events\StoreBrandingDayScheduleRequest;
 use App\Http\Requests\Events\UpdateBrandingDayScheduleRequest;
+use App\Http\Requests\Events\StoreBrandingDaySpeakerRequest;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Storage;
 
 class BrandingDayController extends BaseApiController
 {
     /**
      * Get all companies needing branding for a job fair.
      */
+    /**
+     * Get all companies needing branding for a job fair, along with their speakers.
+     * This is for admin to view candidates for scheduling.
+     */
     public function candidates($jobFairId)
     {
-        $candidates = JobFairParticipation::with('company')
+        $candidates = JobFairParticipation::with(['company', 'brandingDaySpeakers'])
             ->where('event_id', $jobFairId)
             ->where('need_branding', true)
-            ->where('status', '!=', 'rejected')
+            ->where('status', 'approved') // Only approved participations for scheduling
             ->get();
 
         if ($candidates->isEmpty()) {
-            return $this->sendError('No branding candidates found for this job fair.', [], 404);
+            return $this->sendError('No approved branding candidates found for this job fair.', [], 404);
         }
 
         $result = $candidates->map(function ($candidate) {
@@ -34,10 +41,17 @@ class BrandingDayController extends BaseApiController
                 'company_name' => $candidate->company->name ?? null,
                 'need_branding' => $candidate->need_branding,
                 'status' => $candidate->status,
+                'speaker' => $candidate->brandingDaySpeakers->first() ? [
+                    'id' => $candidate->brandingDaySpeakers->first()->id,
+                    'speaker_name' => $candidate->brandingDaySpeakers->first()->speaker_name,
+                    'position' => $candidate->brandingDaySpeakers->first()->position,
+                    'mobile' => $candidate->brandingDaySpeakers->first()->mobile,
+                    'photo' => $candidate->brandingDaySpeakers->first()->photo,
+                ] : null,
             ];
         });
 
-        return $this->sendResponse($result, 'Branding candidates retrieved successfully.');
+        return $this->sendResponse($result, 'Branding candidates with speakers retrieved successfully.');
     }
 
     /**
@@ -45,7 +59,7 @@ class BrandingDayController extends BaseApiController
      */
     public function index($jobFairId)
     {
-        $schedule = BrandingDaySchedule::with('company')
+        $schedule = BrandingDaySchedule::with(['company', 'speaker']) // Eager load the 'speaker' relationship
             ->where('event_id', $jobFairId)
             ->orderBy('branding_day_date')
             ->orderBy('start_time')
@@ -61,6 +75,13 @@ class BrandingDayController extends BaseApiController
                     'start_time' => $slot->start_time,
                     'end_time' => $slot->end_time,
                     'order' => $slot->order,
+                    'speaker' => $slot->speaker ? [
+                        'id' => $slot->speaker->id,
+                        'speaker_name' => $slot->speaker->speaker_name,
+                        'position' => $slot->speaker->position,
+                        'mobile' => $slot->speaker->mobile,
+                        'photo' => $slot->speaker->photo,
+                    ] : null,
                 ];
             });
             if ($schedule->isEmpty()) {
@@ -77,6 +98,7 @@ class BrandingDayController extends BaseApiController
     {
         $data = $request->validated();
 
+        // Delete existing schedule entries for this job fair
         BrandingDaySchedule::where('event_id', $jobFairId)->delete();
 
         foreach ($data['schedule'] as $slot) {
@@ -88,6 +110,7 @@ class BrandingDayController extends BaseApiController
                 'start_time' => $slot['start_time'],
                 'end_time' => $slot['end_time'],
                 'order' => $slot['order'] ?? null,
+                'branding_day_speaker_id' => $slot['speaker_id'] ?? null, // Store speaker_id
             ]);
         }
 
@@ -131,5 +154,82 @@ class BrandingDayController extends BaseApiController
         $slot->delete();
 
         return $this->sendResponse([], 'Schedule slot deleted.');
+    }
+
+    /**
+     * Store a new branding day speaker for a participation that needs branding.
+     * Only one speaker can be stored per participation.
+     */
+    public function storeSpeaker(StoreBrandingDaySpeakerRequest $request, $jobFairId, $participationId)
+    {
+        try {
+            // Find the job fair participation for the given jobFairId and participationId
+            // And ensure the authenticated user is the 'submitted_by' user for this participation
+            $participation = JobFairParticipation::where('event_id', $jobFairId)
+                ->where('id', $participationId)
+                ->where('submitted_by', auth()->id()) // Crucial: ensure authenticated user submitted this participation
+                ->where('need_branding', true) // Ensure participation needs branding
+                ->firstOrFail();
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Job Fair Participation not found, not submitted by you, or does not require branding.', [], 404);
+        }
+
+        // Check if a speaker already exists for this participation
+        if ($participation->brandingDaySpeakers()->exists()) {
+            return $this->sendError('A speaker already exists for this participation. Only one speaker allowed per participation.', [], 409);
+        }
+
+        $data = $request->validated();
+        // Handle photo upload if present
+        if ($request->hasFile('photo')) {
+            $path = $request->file('photo')->store('public/speakers'); // Store in storage/app/public/speakers
+            $data['photo'] = Storage::url($path); // Get public URL
+        }
+
+        // Assign the participation ID from the route parameter
+        $data['job_fair_participation_id'] = $participationId;
+
+        $speaker = BrandingDaySpeaker::create($data);
+
+        return $this->sendResponse($speaker, 'Speaker added successfully.', 201);
+    }
+
+    /**
+     * Get the speaker for a specific job fair participation.
+     */
+    public function showSpeakerForParticipation($jobFairId, $participationId)
+    {
+        try {
+            $participation = JobFairParticipation::with('brandingDaySpeakers')
+                ->where('event_id', $jobFairId)
+                ->where('id', $participationId)
+                ->firstOrFail();
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Job Fair Participation not found.', [], 404);
+        }
+
+        $speaker = $participation->brandingDaySpeakers->first();
+
+        if (is_null($speaker)) {
+            return $this->sendError('No speaker found for this participation.', [], 404);
+        }
+
+        return $this->sendResponse($speaker, 'Speaker retrieved successfully.');
+    }
+
+    /**
+     * Get all speakers for a specific job fair.
+     */
+    public function indexAllSpeakersForJobFair($jobFairId)
+    {
+        $speakers = BrandingDaySpeaker::whereHas('jobFairParticipation', function ($query) use ($jobFairId) {
+            $query->where('event_id', $jobFairId);
+        })->get();
+
+        if ($speakers->isEmpty()) {
+            return $this->sendError('No speakers found for this job fair.', [], 404);
+        }
+
+        return $this->sendResponse($speakers, 'Speakers retrieved successfully.');
     }
 }

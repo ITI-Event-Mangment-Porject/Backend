@@ -38,7 +38,7 @@ class EndLiveEventRequest extends BaseApiRequest
      *
      * @return array
      */
-    public function messages():array
+    public function messages(): array
     {
         return [
             'end_reason.max' => 'The end reason cannot exceed 500 characters.',

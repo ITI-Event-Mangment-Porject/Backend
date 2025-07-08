@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('interview_request_id')->constrained()->onDelete('cascade');
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->integer('queue_position');
+            $table->integer('order_key');
             $table->enum('status', ['waiting', 'in_interview', 'completed', 'no_show', 'cancelled'])->default('waiting');
             $table->timestamp('interview_started_at')->nullable();
             $table->timestamp('interview_ended_at')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->unique('interview_request_id', 'unique_request_queue');
-            $table->index(['company_id', 'queue_position']);
+            $table->index(['company_id', 'order_key']);
             $table->index('status');
         });
     }
