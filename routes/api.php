@@ -27,6 +27,7 @@ use App\Http\Controllers\Event\EventController;
 use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
+use App\Http\Controllers\Event\CheckInController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
@@ -138,7 +139,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
         Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
         Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
-        
+        Route::post('/check-in', [CheckInController::class, 'checkIn']);
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
         Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
@@ -276,17 +277,15 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 });
 
 // Bulk Messages Routes 
-
-Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
-
+Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
-    Route::post('/', [BulkMessageController::class, 'store']);
-    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
-    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+    Route::get('/{id}/status', [BulkMessageController::class,'status']);
+    Route::post('/', [BulkMessageController::class, 'store'])->middleware('role:admin');
+    Route::post('/{id}/send', [BulkMessageController::class, 'send'])->middleware('role:admin');
 });
 
 
-Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . 'role:admin'])->group(function () {
     Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
@@ -336,4 +335,3 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
 });
-
