@@ -9,7 +9,7 @@ use Illuminate\Notifications\Notification;
 use App\Models\Event\Event;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Models\RegistrationAndInterview\EventRegistration;
-use App\Models\NotificationsAndMessaging\Notification as CustomNotification;
+// No need for your custom Notification model here unless you use it in this class
 
 class EventRegistrationSuccess extends Notification implements ShouldQueue
 {
@@ -24,41 +24,42 @@ class EventRegistrationSuccess extends Notification implements ShouldQueue
         $this->registration = $registration;
     }
 
-    /**
-     * Get the notification's delivery channels.
-     */
     public function via(object $notifiable): array
     {
-        return ['mail']; // 'database' will use your custom table
+        return ['mail'];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
     public function toMail(object $notifiable): MailMessage
     {
-        $qrCodeData = QrCode::format('png')->size(200)->generate($this->registration->qr_code_token);
+        // 1. Generate the raw PNG data for the QR code
+        // Ensure qr_code_token is a string to prevent issues with QrCode::generate
+        $qrCodeToken = $this->registration->qr_code_token ?? ''; 
+        $qrCodeData = (string) QrCode::format('png')->size(200)->generate($qrCodeToken);
+        $qrCodeName = 'qrcode.png';
 
+        // 2. Build the email message
         return (new MailMessage)
             ->subject("Registration Confirmed: {$this->event->title}")
-            ->greeting("Hello {$notifiable->name},")
-            ->line("You have successfully registered for: **{$this->event->title}**")
-            ->line("Please find your unique QR code below, which will be required for check-in.")
-            ->embedData($qrCodeData, 'qrcode.png', ['mime' => 'image/png']) // Directly embed the QR code data
-            ->line("📅 Date: {$this->event->start_date->format('F j, Y')}")
-            ->line("⏰ Time: {$this->event->start_time} - {$this->event->end_time}")
-            ->line("📍 Location: {$this->event->location}")
-            ->action('View Event Details', url("/events/{$this->event->slug}"))
-            ->line('Thank you for registering!');
-    }
-
-    /**
-     * Store notification in your custom notifications table
-     */
-    public function toDatabase(object $notifiable): array
-    {
-        // This will be handled by the custom notification creation
-       
-        return [];
+            ->greeting("Hello {$notifiable->first_name},") // Using first_name is more personal
+            ->line("You have successfully registered for: **{$this->event->title}**.")
+            ->line("Please find your unique QR code below. This will be required for check-in at the event.")
+            
+            // 3. THE FIX: Add this line to display the embedded image
+            // The Markdown `![Alt text](cid:filename)` tells the email client to display the embedded image here.
+            ->line("![QR Code](cid:{$qrCodeName})") 
+            
+            ->line("---") // A separator for clarity
+            ->line("**Event Details:**")
+            ->line("📅 **Date:** {$this->event->start_date->format('F j, Y')}")
+            ->line("⏰ **Time:** {$this->event->start_time} - {$this->event->end_time}")
+            ->line("📍 **Location:** {$this->event->location}")
+            ->action('View Event Details', url("/events/{$this->event->slug}")) // Assuming you have a slug
+            ->line('We look forward to seeing you there!')
+            
+            // 4. Attach the data with the same filename used in the line() call above, and make it inline.
+            ->attachData($qrCodeData, $qrCodeName, [
+                'mime' => 'image/png',
+                'as' => $qrCodeName, // This is important for the cid to work correctly
+            ]);
     }
 }
