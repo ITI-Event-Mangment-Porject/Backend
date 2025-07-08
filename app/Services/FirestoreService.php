@@ -1,6 +1,6 @@
 <?php
 namespace App\Services;
-
+use App\Models\Auth\User;
 use Kreait\Firebase\Factory;
 class FirestoreService
 {
@@ -11,6 +11,16 @@ class FirestoreService
          $firestore =$factory->createFirestore();
          $this->db = $firestore->database();
     }
+
+        public function sendToAllUsers(array $data)
+    {
+        $users = User::pluck('id'); 
+
+        foreach ($users as $userId) {
+            $this->send($userId, $data);
+        }
+    }
+
 
     public function send ($reciever_id,$data){
         $this ->db->collection('notifications')

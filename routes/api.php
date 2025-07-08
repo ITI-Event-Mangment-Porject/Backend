@@ -54,7 +54,7 @@ Route::get('/test-connection', function () {
 });
 
 // Test routes for User API endpoints (no authentication required)
-Route::prefix('test/users')->group(function () {
+Route::middleware(['auth:api'])->prefix('/users')->group(function () {
     Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
     Route::post('/', [UserController::class, 'store']);               // Test creating a user
     Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
@@ -74,8 +74,8 @@ Route::prefix('test/tracks')->group(function () {
 // Test routes for LiveEvent API endpoints (no authentication required for testing)
 Route::prefix('test/live')->group(function () {
     Route::get('/events/{id}/status', [LiveEventController::class, 'status']);     // Get live status of an event
-    Route::post('/events/{id}/start', [LiveEventController::class, 'start']);      // Start a live event
-    Route::post('/events/{id}/end', [LiveEventController::class, 'end']);          // End a live event
+    Route::post('/events/{id}/start', [LiveEventController::class, 'start'])->middleware('check.any.role:admin');      // Start a live event
+    Route::post('/events/{id}/end', [LiveEventController::class, 'end'])->middleware('check.any.role:admin');          // End a live event
 });
 
 
@@ -103,8 +103,9 @@ Route::prefix('auth')->group(function () {
     |--------------------------------------------------------------------------
     |
     */
+    Route::get('/events', [EventController::class, 'index']); // List all events
+
     Route::middleware(['auth:api'])->prefix('events')->group(function () {
-        Route::get('/', [EventController::class, 'index']); // List all events
         Route::post('/', [EventController::class, 'store']);
         
         // Specific routes FIRST (these need to come before the generic /{event_flexible})
@@ -191,11 +192,11 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::post('/', [JobFairController::class, 'store'])->middleware('role:admin');
     Route::put('/{jobFairId}', [JobFairController::class, 'update'])->middleware('role:admin');
     Route::delete('/{jobFairId}', [JobFairController::class, 'destroy'])->middleware('role:admin');
-    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/companies', [JobFairController::class, 'Companies'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('/{jobFairId}/statistics', [JobFairController::class, 'statistics'])->middleware('check.any.role:admin,staff');
 
     Route::post('/{jobFairId}/participate', [JobFairParticipationController::class, 'store'])->middleware('role:company_representative');
-    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index'])->middleware('check.any.role:admin,staff');
+    Route::get('/{jobFairId}/participations', [JobFairParticipationController::class, 'index'])->middleware('check.any.role:admin,staff,company_representative');
     Route::get('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'show'])->middleware( 'check.any.role:admin,staff,company_representative');
     Route::put('/{jobFairId}/participations/{participationId}', [JobFairParticipationController::class, 'review'])->middleware('role:admin');
 
@@ -207,7 +208,7 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::delete('/job-profiles/{jobProfileId}', [JobProfileController::class, 'destroy'])->middleware('role:company_representative');
 
     Route::get('/{jobFairId}/interview-slots', [InterviewSlotController::class, 'jobFairSlots'])->middleware('role:admin');
-    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::get('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'participationSlots'])->middleware('check.any.role:company_representative,admin,staff');
     Route::post('/{jobFairId}/participations/{participationId}/interview-slots', [InterviewSlotController::class, 'store'])->middleware('role:company_representative');
     Route::get('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'show'])->middleware('check.any.role:admin,staff,company_representative');
     Route::put('/{jobFairId}/participations/{participationId}/interview-slots/{slotId}', [InterviewSlotController::class, 'update'])->middleware('role:company_representative');
@@ -275,17 +276,15 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 });
 
 // Bulk Messages Routes 
-
-Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
-
+Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
-    Route::post('/', [BulkMessageController::class, 'store']);
-    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
-    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+    Route::get('/{id}/status', [BulkMessageController::class,'status']);
+    Route::post('/', [BulkMessageController::class, 'store'])->middleware('role:admin');
+    Route::post('/{id}/send', [BulkMessageController::class, 'send'])->middleware('role:admin');
 });
 
 
-Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . 'role:admin'])->group(function () {
     Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);

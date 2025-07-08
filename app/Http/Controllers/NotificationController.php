@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Services\FirestoreService; // Assuming you have a FirestoreService for Firebase notifications
+use App\Services\FirestoreService; 
 
 class NotificationController extends Controller
 {

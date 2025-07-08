@@ -173,6 +173,7 @@ class JobFairController extends BaseApiController
                 'companyId' => $p->company->id,
                 'companyName' => $p->company->name,
                 'status' => $p->status,
+                'need_branding' => $p->need_branding,
             ];
         });
 
