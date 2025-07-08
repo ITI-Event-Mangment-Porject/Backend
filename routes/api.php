@@ -30,7 +30,13 @@ use App\Http\Controllers\Event\EventStaffController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
+
 use App\Models\Auth\User;
+
+
+use App\Http\Controllers\AIInsightsController;
+
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -248,9 +254,10 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
     Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware(RoleMiddleware::class.':admin');;
     // Toggle form status (admin only)
     Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
+    // AI-powered feedback analysis
+    Route::post('/events/{eventId}/analyze', [AIInsightsController::class, 'generateInsights'])
+        ->middleware('check.any.role:admin');
 });
-
-
 
 // Notifications Routes 
 
@@ -262,11 +269,6 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
     Route::post('/admin-send', [NotificationController::class, 'storeByAdmin'])->middleware(RoleMiddleware::class.':admin') ;
     Route::get('/all', [NotificationController::class, 'allNotifications'])->middleware(['auth:api', RoleMiddleware::class.':admin']);
 });
-
-
-
-
-
 
 // Bulk Messages Routes 
 Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
@@ -281,5 +283,50 @@ Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . 'rol
     Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
+});
+
+
+Route::prefix('events/{event}/insights')->middleware(['auth', 'role:admin'])->group(function () {
+    Route::post('generate', [AIInsightsController::class, 'generate']);
+    Route::get('/', [AIInsightsController::class, 'index']);
+});
+
+// AI Insights Routes
+Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
+    
+    // Generate AI insights for event feedback (Admin only)
+    Route::post('/events/{eventId}/generate', [AIInsightsController::class, 'generateInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.generate');
+    
+    // Get AI insights for specific event (Admin only)
+    Route::get('/events/{eventId}', [AIInsightsController::class, 'getInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.show');
+
+    // Get detailed AI insights with full analysis data
+    Route::get('/events/{eventId}/detailed', [AIInsightsController::class, 'getDetailedInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.detailed');
+    
+    // Get all AI insights (Admin only)
+    Route::get('/', [AIInsightsController::class, 'getAllInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.index');
+    
+    // Delete AI insights for specific event (Admin only)
+    Route::delete('/events/{eventId}', [AIInsightsController::class, 'deleteInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.delete');
+
+    // Auto-generate insights for all events (Admin only)
+    Route::post('/auto-generate-all', [AIInsightsController::class, 'autoGenerateAll'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.auto.generate.all');
+
+    // Get events that need insights (Admin only)
+    Route::get('/events-needing-insights', [AIInsightsController::class, 'getEventsNeedingInsights'])
+        ->middleware('check.any.role:admin')
+        ->name('ai.insights.events.needing');
 });
 

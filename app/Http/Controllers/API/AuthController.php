@@ -171,6 +171,7 @@ class AuthController extends BaseApiController
             
             return $this->sendResponse([
                 'user' => $user,
+                'role' => $user->getRoleNames()->first(),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
                 'portal_token' => $portalToken,
