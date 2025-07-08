@@ -28,26 +28,33 @@ class InterviewQueueController extends BaseApiController
                 return $this->sendError('You are not authorized to view this slot queue.', [], 403);
             }
 
+            $waitingCounter = 0;
             $queue = InterviewQueue::with(['user.track', 'interviewRequest'])
                 ->where('slot_id', $slotId)
-                ->orderBy('queue_position')
+                ->orderBy('order_key')
                 ->get()
-                ->map(function ($entry) {
+                ->map(function ($entry) use (&$waitingCounter) {
+                    $position = 0;
+                    if ($entry->status === 'waiting') {
+                        $waitingCounter++;
+                        $position = $waitingCounter;
+                    }
                     return [
                         'queue_id' => $entry->id,
-                        'queue_position' => $entry->queue_position,
+                        'queue_position' => $position,
+                        'order_key' => $entry->order_key,
                         'status' => $entry->status,
-                        'student' => [
-                            'id' => $entry->user->id,
-                            'first_name' => $entry->user->first_name,
-                            'last_name' => $entry->user->last_name,
-                            'email' => $entry->user->email,
-                            'phone' => $entry->user->phone,
-                            'profile_image' => $entry->user->profile_image,
-                            'cv_path' => $entry->user->cv_path,
-                            'track_id' => $entry->user->track_id,
-                            'track_name' => optional($entry->user->track)->name,
-                        ],
+                    'student' => [
+                        'id' => optional($entry->user)->id,
+                        'first_name' => optional($entry->user)->first_name,
+                        'last_name' => optional($entry->user)->last_name,
+                        'email' => optional($entry->user)->email,
+                        'phone' => optional($entry->user)->phone,
+                        'profile_image' => optional($entry->user)->profile_image,
+                        'cv_path' => optional($entry->user)->cv_path,
+                        'track_id' => optional($entry->user)->track_id,
+                        'track_name' => optional(optional($entry->user)->track)->name,
+                    ],
                         'interview_request_id' => $entry->interview_request_id,
                         'notes' => $entry->notes,
                     ];
@@ -87,43 +94,88 @@ class InterviewQueueController extends BaseApiController
         }
 
         try {
-            $queues = InterviewQueue::with(['slot', 'user.track', 'interviewRequest'])
+            // Fetch all relevant queues to calculate statistics
+            $allQueues = InterviewQueue::with(['user', 'user.track'])
                 ->where('company_id', $companyId)
                 ->whereHas('slot.participation', function ($q) use ($jobFairId, $companyId) {
                     $q->where('event_id', $jobFairId)
                       ->where('company_id', $companyId);
                 })
-                ->orderBy('queue_position')
-                ->get()
-                ->map(function ($entry) {
-                    return [
-                        'queue_id' => $entry->id,
-                        'queue_position' => $entry->queue_position,
-                        'status' => $entry->status,
-                        'student' => [
-                            'id' => $entry->user->id,
-                            'first_name' => $entry->user->first_name,
-                            'last_name' => $entry->user->last_name,
-                            'email' => $entry->user->email,
-                            'phone' => $entry->user->phone,
-                            'profile_image' => $entry->user->profile_image,
-                            'cv_path' => $entry->user->cv_path,
-                            'track_id' => $entry->user->track_id,
-                            'track_name' => optional($entry->user->track)->name,
-                        ],
-                        'slot' => [
-                            'id' => $entry->slot->id,
-                            'date' => $entry->slot->slot_date,
-                            'start_time' => $entry->slot->start_time,
-                            'end_time' => $entry->slot->end_time,
-                        ],
-                        'interview_request_id' => $entry->interview_request_id,
-                        'notes' => $entry->notes,
-                    ];
-                });
+                ->get();
+
+            $totalStudents = $allQueues->count();
+            $waitingStudentsCount = $allQueues->where('status', 'waiting')->count();
+            $completedStudents = $allQueues->where('status', 'completed');
+            $completedStudentsCount = $completedStudents->count();
+            $inInterviewStudentEntry = $allQueues->where('status', 'in_interview')->first();
+
+            $currentIntervieweeName = null;
+            if ($inInterviewStudentEntry && $inInterviewStudentEntry->user) {
+                $currentIntervieweeName = $inInterviewStudentEntry->user->first_name . ' ' . $inInterviewStudentEntry->user->last_name;
+            }
+
+            $averageInterviewTime = 0;
+            $trafficFlag = 'ok';
+            if ($completedStudentsCount > 0) {
+                $totalDuration = 0;
+                foreach ($completedStudents as $entry) {
+                    if ($entry->interview_started_at && $entry->interview_ended_at) {
+                        $totalDuration += abs($entry->interview_ended_at->diffInMinutes($entry->interview_started_at));
+                    }
+                }
+                $averageInterviewTime = $totalDuration / $completedStudentsCount;
+
+                if ($averageInterviewTime > 15) {
+                    $trafficFlag = 'traffic';
+                }
+            }
+
+            $waitingCounter = 0;
+            $queues = $allQueues->map(function ($entry) use (&$waitingCounter) {
+                $position = 0;
+                if ($entry->status === 'waiting') {
+                    $waitingCounter++;
+                    $position = $waitingCounter;
+                }
+                return [
+                    'queue_id' => $entry->id,
+                    'queue_position' => $position,
+                    'order_key' => $entry->order_key,
+                    'status' => $entry->status,
+                    'student' => [
+                        'id' => optional($entry->user)->id,
+                        'first_name' => optional($entry->user)->first_name,
+                        'last_name' => optional($entry->user)->last_name,
+                        'email' => optional($entry->user)->email,
+                        'phone' => optional($entry->user)->phone,
+                        'profile_image' => optional($entry->user)->profile_image,
+                        'cv_path' => optional($entry->user)->cv_path,
+                        'track_id' => optional($entry->user)->track_id,
+                        'track_name' => optional(optional($entry->user)->track)->name,
+                    ],
+                    'slot' => [
+                        'id' => $entry->slot->id,
+                        'date' => $entry->slot->slot_date,
+                        'start_time' => $entry->slot->start_time,
+                        'end_time' => $entry->slot->end_time,
+                    ],
+                    'interview_request_id' => $entry->interview_request_id,
+                    'notes' => $entry->notes,
+                ];
+            });
 
             return $this->sendResponse(
-                ['queue' => $queues],
+                [
+                    'queue' => $queues,
+                    'summary' => [
+                        'total' => $totalStudents,
+                        'waiting' => $waitingStudentsCount,
+                        'completed' => $completedStudentsCount,
+                        'in_interview_student_name' => $currentIntervieweeName,
+                        'average_interview_time_minutes' => round($averageInterviewTime, 2),
+                        'traffic_flag' => $trafficFlag,
+                    ],
+                ],
                 'Company queue retrieved successfully.'
             );
         } catch (\Exception $e) {
@@ -141,17 +193,24 @@ class InterviewQueueController extends BaseApiController
         }
 
         try {
+            $waitingCounter = 0;
             $queues = InterviewQueue::with(['slot', 'company', 'user.track', 'interviewRequest'])
                 ->where('user_id', $studentId)
                 ->whereHas('slot.participation', function ($q) use ($jobFairId) {
                     $q->where('event_id', $jobFairId);
                 })
-                ->orderBy('queue_position')
+                ->orderBy('order_key')
                 ->get()
-                ->map(function ($entry) {
+                ->map(function ($entry) use (&$waitingCounter) {
+                    $position = 0;
+                    if ($entry->status === 'waiting') {
+                        $waitingCounter++;
+                        $position = $waitingCounter;
+                    }
                     return [
                         'queue_id' => $entry->id,
-                        'queue_position' => $entry->queue_position,
+                        'queue_position' => $position,
+                        'order_key' => $entry->order_key,
                         'status' => $entry->status,
                         'company' => [
                             'id' => $entry->company->id,
@@ -183,33 +242,40 @@ class InterviewQueueController extends BaseApiController
     {
         // No extra check needed, middleware restricts to admin/staff
         try {
+            $waitingCounter = 0;
             $queues = InterviewQueue::with(['slot', 'company', 'user.track', 'interviewRequest'])
                 ->whereHas('slot.participation', function ($q) use ($jobFairId) {
                     $q->where('event_id', $jobFairId);
                 })
-                ->orderBy('queue_position')
+                ->orderBy('order_key')
                 ->get()
-                ->map(function ($entry) {
+                ->map(function ($entry) use (&$waitingCounter) {
+                    $position = 0;
+                    if ($entry->status === 'waiting') {
+                        $waitingCounter++;
+                        $position = $waitingCounter;
+                    }
                     return [
                         'queue_id' => $entry->id,
-                        'queue_position' => $entry->queue_position,
+                        'queue_position' => $position,
+                        'order_key' => $entry->order_key,
                         'status' => $entry->status,
                         'company' => [
                             'id' => $entry->company->id,
                             'name' => $entry->company->name,
                             'logo_path' => $entry->company->logo_path,
                         ],
-                        'student' => [
-                            'id' => $entry->user->id,
-                            'first_name' => $entry->user->first_name,
-                            'last_name' => $entry->user->last_name,
-                            'email' => $entry->user->email,
-                            'phone' => $entry->user->phone,
-                            'profile_image' => $entry->user->profile_image,
-                            'cv_path' => $entry->user->cv_path,
-                            'track_id' => $entry->user->track_id,
-                            'track_name' => optional($entry->user->track)->name,
-                        ],
+                    'student' => [
+                        'id' => optional($entry->user)->id,
+                        'first_name' => optional($entry->user)->first_name,
+                        'last_name' => optional($entry->user)->last_name,
+                        'email' => optional($entry->user)->email,
+                        'phone' => optional($entry->user)->phone,
+                        'profile_image' => optional($entry->user)->profile_image,
+                        'cv_path' => optional($entry->user)->cv_path,
+                        'track_id' => optional($entry->user)->track_id,
+                        'track_name' => optional(optional($entry->user)->track)->name,
+                    ],
                         'slot' => [
                             'id' => $entry->slot->id,
                             'date' => $entry->slot->slot_date,
@@ -241,7 +307,7 @@ class InterviewQueueController extends BaseApiController
                 ->firstOrFail();
 
             $data = $request->validate([
-                'queue_position' => 'sometimes|integer|min:0',
+                'order_key' => 'sometimes|numeric',
                 'status' => 'sometimes|in:waiting,in_interview,completed,skipped,cancelled',
                 'notes' => 'nullable|string',
             ]);
@@ -251,7 +317,7 @@ class InterviewQueueController extends BaseApiController
             return $this->sendResponse(
                 [
                     'queue_id' => $queue->id,
-                    'queue_position' => $queue->queue_position,
+                    'order_key' => $queue->order_key,
                     'status' => $queue->status,
                     'notes' => $queue->notes,
                 ],
@@ -309,7 +375,7 @@ class InterviewQueueController extends BaseApiController
             if ($currentInterview) {
                 $currentInterview->update([
                     'status' => 'completed',
-                    'queue_position' => 0, // Reset their position to 0 since they are now in interview
+                    'order_key' => 0, // Reset their key to 0 as they are no longer in the active queue
                     'notes' => 'Interview completed.',
                     'interview_ended_at' => now(),
                 ]);
@@ -318,7 +384,7 @@ class InterviewQueueController extends BaseApiController
             // 3. Find the next student in the queue for this slot.
             $nextStudent = InterviewQueue::where('slot_id', $slotId)
                 ->where('status', 'waiting')
-                ->orderBy('queue_position', 'asc')
+                ->orderBy('order_key', 'asc')
                 ->first();
 
             // If there is no one left in the queue, commit and return.
@@ -330,15 +396,11 @@ class InterviewQueueController extends BaseApiController
             // 4. Update the next student's status to 'in_interview'.
             $nextStudent->update([
                 'status' => 'in_interview',
-                'queue_position' => 0, // Reset their position to 0 since they are now in interview
+                'order_key' => 0, // Reset their key to 0 as they are now in interview
                 'interview_started_at' => now(),
             ]);
 
-            // 5. Decrement the queue position for all other waiting students in this slot.
-            InterviewQueue::where('slot_id', $slotId)
-                ->where('status', 'waiting')
-                ->where('id', '!=', $nextStudent->id) // Exclude the student now in interview
-                ->decrement('queue_position');
+            // 5. No need to decrement anything. The ordering is now handled by the order_key.
 
 
             DB::commit();
@@ -371,18 +433,18 @@ class InterviewQueueController extends BaseApiController
                 ->firstOrFail();
 
             // Find the last position in the queue for this specific slot
-            $lastPosition = InterviewQueue::where('slot_id', $queueEntry->slot_id)->max('queue_position');
+            $lastOrderKey = InterviewQueue::where('slot_id', $queueEntry->slot_id)->max('order_key');
 
             $queueEntry->update([
                 'status' => 'waiting',
-                'queue_position' => $lastPosition + 1,
+                'order_key' => $lastOrderKey + 1,
             ]);
 
             return $this->sendResponse(
                 [
                     'queue_id' => $queueEntry->id,
                     'status' => $queueEntry->status,
-                    'queue_position' => $queueEntry->queue_position,
+                    'order_key' => $queueEntry->order_key,
                 ],
                 'Student has been moved to the end of the queue.'
             );

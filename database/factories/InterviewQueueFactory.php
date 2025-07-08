@@ -23,7 +23,7 @@ class InterviewQueueFactory extends Factory
             'company_id' => Company::factory(),
             'user_id' => User::factory(),
             'slot_id' => InterviewSlot::factory(),
-            'queue_position' => $this->faker->numberBetween(1, 20),
+            'order_key' => $this->faker->numberBetween(1, 20),
             'status' => $status,
             'interview_started_at' => in_array($status, ['in_interview', 'completed']) ? 
                 $this->faker->dateTimeBetween('-2 hours') : null,

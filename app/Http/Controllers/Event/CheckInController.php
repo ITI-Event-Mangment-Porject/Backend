@@ -3,39 +3,36 @@
 namespace App\Http\Controllers\Event;
 
 use App\Http\Controllers\API\BaseApiController;
-use App\Http\Controllers\Controller;
-use App\Models\Event\Event;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\Models\RegistrationAndInterview\EventRegistration;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CheckInController extends BaseApiController
 {
-    
-// No additional code needed here, but update the checkIn method to use sendResponse and sendError:
-
-    public function checkIn(Request $request, $eventId)
+    public function checkIn(Request $request)
     {
-    $user = auth()->user();
-    $event = Event::findOrFail($eventId);
+        $request->validate([
+            'token' => 'required|string|exists:event_registrations,qr_code_token',
+        ]);
 
-    $registration = EventRegistration::where('event_id', $event->id)
-                                       ->where('user_id', $user->id)
-                                       ->first();
+        try {
+            $registration = EventRegistration::where('qr_code_token', $request->token)->firstOrFail();
 
-        if ($registration) {
-        if ($registration->status === 'attended') {
-            return $this->sendResponse(null, 'You have already checked in.');
-        }
+            if ($registration->isCheckedIn()) {
+                return $this->sendError('User has already been checked in.', [], 422);
+            }
 
-        $registration->status = 'attended';
-        $registration->checked_in_at = now();
-        $registration->check_in_method = 'qr';
-        $registration->save();
+            $registration->update([
+                'status' => 'attended',
+                'checked_in_at' => now(),
+                'check_in_method' => 'qr_code',
+            ]);
 
-        return $this->sendResponse(null, 'You have been checked in successfully!');
-        } else {
-          return $this->sendError('You are not registered for this event.', [], 404);
+            return $this->sendResponse($registration, 'Check-in successful.');
+
+        } catch (\Exception $e) {
+            Log::error('Check-in failed: ' . $e->getMessage());
+            return $this->sendError('Check-in failed. Please try again.', [], 500);
         }
     }
 }

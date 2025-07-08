@@ -42,7 +42,7 @@ class UpdateEventRequest extends BaseApiRequest
             'end_date' => ['sometimes', 'required', 'date', 'after_or_equal:start_date'],
             'start_time' => ['sometimes', 'required', 'date_format:H:i'],
             'end_time' => ['sometimes', 'required', 'date_format:H:i'],
-            'banner_image' => ['nullable', 'string', 'max:500', 'url'],
+            'banner' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
             'registration_deadline' => [
                 'nullable',
                 'date',
@@ -74,7 +74,9 @@ class UpdateEventRequest extends BaseApiRequest
             'start_time.required' => 'The start time is required.',
             'end_time.required' => 'The end time is required.',
             'registration_deadline.before_or_equal' => 'Registration deadline must be before or on the event start date.',
-            'banner_image.url' => 'The banner image must be a valid URL.',
+            'banner.image' => 'The uploaded file must be an image.',
+            'banner.mimes' => 'The banner image must be a file of type: jpeg, png, jpg.',
+            'banner.max' => 'The banner image may not be greater than 2MB.',
             'slido_qr_code.url' => 'The Slido QR code must be a valid URL.',
             'slido_embed_url.url' => 'The Slido embed URL must be a valid URL.',
         ];

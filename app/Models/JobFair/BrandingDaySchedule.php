@@ -32,5 +32,9 @@ class BrandingDaySchedule extends Model
     {
         return $this->belongsTo(JobFairParticipation::class, 'participation_id');
     }
+
+    public function speaker()
+    {
+        return $this->belongsTo(BrandingDaySpeaker::class, 'branding_day_speaker_id');
+    }
 }
-    

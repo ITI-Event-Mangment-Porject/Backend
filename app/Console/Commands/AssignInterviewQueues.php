@@ -43,7 +43,7 @@ class AssignInterviewQueues extends Command
 
         $assignedCount = 0;
 
-        // Group slots by company/event to assign queue_position globally per company/event
+        // Group slots by company/event to assign order_key globally per company/event
         $slotsByCompanyEvent = [];
         foreach ($slots as $slot) {
             $companyId = $slot->participation->company_id;
@@ -62,12 +62,12 @@ class AssignInterviewQueues extends Command
                     })
                     ->get();
 
-                // Get the current max queue_position for this company/event
+                // Get the current max order_key for this company/event
                 $maxPosition = InterviewQueue::where('company_id', $companyId)
                     ->whereHas('slot.participation', function ($q) use ($eventId) {
                         $q->where('event_id', $eventId);
                     })
-                    ->max('queue_position') ?? 0;
+                    ->max('order_key') ?? 0;
 
                 $position = $maxPosition + 1;
 
@@ -93,7 +93,7 @@ class AssignInterviewQueues extends Command
                                 'company_id' => $companyId,
                                 'user_id' => $request->user_id,
                                 'slot_id' => $slot->id,
-                                'queue_position' => $position++,
+                                'order_key' => $position++,
                                 'status' => 'waiting',
                             ]);
                             $slotCapacities[$slot->id]--;

@@ -22,13 +22,29 @@ class JobFairSeeder extends Seeder
         $companies = Company::where('is_approved', true)->take(15)->get();
         $tracks = Track::all();
         $students = User::whereNotNull('track_id')->get();
-        $reviewer = User::first();
+        // Get all company representatives
+        $companyRepresentatives = User::role('company_representative')->get();
+        $reviewer = User::first(); // Assuming reviewer can be any admin/staff user
+
+        // Keep track of which company representative has submitted a participation
+        $usedCompanyRepresentatives = collect();
 
         foreach ($jobFairs as $jobFair) {
             // Create company participations
             foreach ($companies->random(8) as $company) {
                 // Randomly decide if this participation needs branding
                 $needBranding = fake()->boolean(40); // 40% chance
+
+                // Assign a unique company representative
+                $availableRepresentatives = $companyRepresentatives->diff($usedCompanyRepresentatives);
+                if ($availableRepresentatives->isEmpty()) {
+                    // Refill if all are used, or handle scenario where not enough reps
+                    $availableRepresentatives = $companyRepresentatives->shuffle();
+                    $usedCompanyRepresentatives = collect();
+                }
+                $assignedRepresentative = $availableRepresentatives->pop();
+                $usedCompanyRepresentatives->push($assignedRepresentative);
+
 
                 $participation = JobFairParticipation::updateOrCreate(
                     [
@@ -39,7 +55,7 @@ class JobFairSeeder extends Seeder
                         'status' => 'approved',
                         'reviewed_by' => $reviewer->id,
                         'reviewed_at' => now()->subDays(rand(5, 15)),
-                        'submitted_by' => $reviewer->id,
+                        'submitted_by' => $assignedRepresentative->id, // Assign unique company rep
                         'need_branding' => $needBranding,
                     ]
                 );
@@ -103,7 +119,7 @@ class JobFairSeeder extends Seeder
 
                 // Seed BrandingDaySchedule for participations that need branding
                 if ($needBranding) {
-                    BrandingDaySchedule::create([
+                    $brandingDaySchedule = BrandingDaySchedule::create([
                         'event_id' => $jobFair->id,
                         'company_id' => $company->id,
                         'participation_id' => $participation->id,
@@ -112,11 +128,28 @@ class JobFairSeeder extends Seeder
                         'end_time' => fake()->time('H:i:s', '18:00:00'),
                         'order' => rand(1, 20),
                     ]);
+
+                    // Create one BrandingDaySpeaker for this participation
+                    $speaker = \App\Models\JobFair\BrandingDaySpeaker::factory()->create([
+                        'job_fair_participation_id' => $participation->id,
+                    ]);
+
+                    // Update the created BrandingDaySchedule with the speaker_id
+                    $brandingDaySchedule->update(['branding_day_speaker_id' => $speaker->id]);
                 }
             }
 
-            // Create some pending participations
+            // Create some pending participations (assign unique company representatives)
             foreach ($companies->random(3) as $company) {
+                 // Assign a unique company representative
+                $availableRepresentatives = $companyRepresentatives->diff($usedCompanyRepresentatives);
+                if ($availableRepresentatives->isEmpty()) {
+                    $availableRepresentatives = $companyRepresentatives->shuffle();
+                    $usedCompanyRepresentatives = collect();
+                }
+                $assignedRepresentative = $availableRepresentatives->pop();
+                $usedCompanyRepresentatives->push($assignedRepresentative);
+
                 JobFairParticipation::updateOrCreate(
                     [
                         'event_id' => $jobFair->id,
@@ -124,7 +157,7 @@ class JobFairSeeder extends Seeder
                     ],
                     [
                         'status' => 'pending',
-                        'submitted_by' => $reviewer->id,
+                        'submitted_by' => $assignedRepresentative->id, // Assign unique company rep
                     ]
                 );
             }
