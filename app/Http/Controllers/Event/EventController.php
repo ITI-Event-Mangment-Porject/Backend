@@ -14,6 +14,7 @@ use Spatie\QueryBuilder\AllowedSort;
 use App\Http\Filters\Event\EventStatusFilter;
 use App\Http\Filters\Event\EventDateRangeFilter;
 use App\Http\Filters\Event\EventTypeFilter;
+use Illuminate\Support\Facades\Storage;
 
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
@@ -113,6 +114,12 @@ class EventController extends BaseApiController
     {
         try {
             $validatedData = $request->validated();
+            
+            if ($request->hasFile('banner')) {
+                $path = $request->file('banner')->store('events/banners', 'public');
+                $validatedData['banner_image'] = '/storage/' . $path;
+            }
+
             $event = Event::create($validatedData);
 
             if (!$event) {
@@ -139,6 +146,26 @@ class EventController extends BaseApiController
             if (in_array($event_flexible->status, ['ongoing', 'completed'])) {
                 return $this->sendError('Cannot update an ongoing or completed event', [], 400);
             }
+
+            // Handle banner image upload
+            if ($request->hasFile('banner')) {
+                // Delete old banner if exists
+                if ($event_flexible->banner_image) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $event_flexible->banner_image));
+                }
+                $path = $request->file('banner')->store('events/banners', 'public');
+                $validatedData['banner_image'] = '/storage/' . $path;
+            } elseif (array_key_exists('banner', $validatedData) && $validatedData['banner'] === null) {
+                // If 'banner' is explicitly set to null in the request, remove the existing banner
+                if ($event_flexible->banner_image) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $event_flexible->banner_image));
+                }
+                $validatedData['banner_image'] = null;
+            } else {
+                // If banner is not provided in the request, keep the existing one
+                unset($validatedData['banner_image']);
+            }
+
 
             $updated = $event_flexible->update($validatedData);
 
@@ -294,13 +321,12 @@ class EventController extends BaseApiController
             return $this->sendError('Server Error: ' . $e->getMessage(), [], 500);
         }
     }
-    
-    public function uploadBanner(Request $request, $event_id)
+    private function uploadBanner(Request $request, $event_id)
     {
         try {
-            $request->validate([
-                'banner' => 'required|image|mimes:jpeg,png,jpg|max:2048'
-            ]);
+            // $request->validate([
+            //     'banner' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+            // ]);
         
             $event = Event::find($event_id);
         
@@ -332,5 +358,4 @@ class EventController extends BaseApiController
             return $this->sendError('Failed to upload banner: ' . $e->getMessage(), [], 500);
         }
     }
-    
 }

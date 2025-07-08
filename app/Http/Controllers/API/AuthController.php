@@ -67,8 +67,9 @@ class AuthController extends BaseApiController
             $userData = $portalResponse['data'];
             // $userData = $portalData['user'];
             
+            
             // Validate required fields from portal response
-            if (!isset($userData['id'], $userData['role'], $userData['first_name'], $userData['last_name'], $userData['email'])) {
+            if (!isset($userData['id'], $userData['role'], $userData['email']) && ( !isset($userData['first_name'], $userData['last_name']) || !isset($userData['full_name']) )) {
                 return $this->sendError('Invalid user data from portal', [], 400);
             }  
             
@@ -76,6 +77,7 @@ class AuthController extends BaseApiController
                 return $this->sendError('Invalid email format.');
             }
             $role = $userData['role'] === 'alumni' ? 'student' : $userData['role']; 
+            $role = $userData['role'] === 'company' ? 'company_representative' : $userData['role']; 
             // Check if user exists in local database
             $user = User::where('portal_user_id', $userData['id'])->first();
             
@@ -87,8 +89,8 @@ class AuthController extends BaseApiController
                     'portal_user_id' => $userData['id'],
                     'email' => $userData['email'],
                     // 'cv_path' => $userData['cv_path'] ?? null,
-                    'first_name' => $userData['first_name'] ?? null,
-                    'last_name' => $userData['last_name'] ?? null,
+                    'first_name' => $userData['first_name'] ?? $userData['full_name'] ?? $userData['company_name'],
+                    'last_name' => $userData['last_name'] ?? $userData['full_name'] ?? $userData['company_name'],
                     'phone' => $userData['phone'] ?? null,
                     'track_id' => $track->id ?? null,
                     

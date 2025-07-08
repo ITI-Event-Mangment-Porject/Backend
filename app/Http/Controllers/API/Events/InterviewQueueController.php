@@ -105,12 +105,29 @@ class InterviewQueueController extends BaseApiController
 
             $totalStudents = $allQueues->count();
             $waitingStudentsCount = $allQueues->where('status', 'waiting')->count();
-            $completedStudentsCount = $allQueues->where('status', 'completed')->count();
+            $completedStudents = $allQueues->where('status', 'completed');
+            $completedStudentsCount = $completedStudents->count();
             $inInterviewStudentEntry = $allQueues->where('status', 'in_interview')->first();
 
             $currentIntervieweeName = null;
             if ($inInterviewStudentEntry && $inInterviewStudentEntry->user) {
                 $currentIntervieweeName = $inInterviewStudentEntry->user->first_name . ' ' . $inInterviewStudentEntry->user->last_name;
+            }
+
+            $averageInterviewTime = 0;
+            $trafficFlag = 'ok';
+            if ($completedStudentsCount > 0) {
+                $totalDuration = 0;
+                foreach ($completedStudents as $entry) {
+                    if ($entry->interview_started_at && $entry->interview_ended_at) {
+                        $totalDuration += abs($entry->interview_ended_at->diffInMinutes($entry->interview_started_at));
+                    }
+                }
+                $averageInterviewTime = $totalDuration / $completedStudentsCount;
+
+                if ($averageInterviewTime > 15) {
+                    $trafficFlag = 'traffic';
+                }
             }
 
             $waitingCounter = 0;
@@ -155,6 +172,8 @@ class InterviewQueueController extends BaseApiController
                         'waiting' => $waitingStudentsCount,
                         'completed' => $completedStudentsCount,
                         'in_interview_student_name' => $currentIntervieweeName,
+                        'average_interview_time_minutes' => round($averageInterviewTime, 2),
+                        'traffic_flag' => $trafficFlag,
                     ],
                 ],
                 'Company queue retrieved successfully.'
