@@ -9,10 +9,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Services\FirestoreService;
 
 class BulkMessageController extends Controller
 
 {
+      public function __construct(FirestoreService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
     use AuthorizesRequests;
 
     /**
@@ -78,7 +83,18 @@ class BulkMessageController extends Controller
         // Dispatch job to send messages
         dispatch(new \App\Jobs\SendBulkMessages($message));
 
+
+
         $message->update(['status' => 'sending']);
+      
+      
+        $this->firebase->sendToAllUsers([
+        'title' => 'Important Message',
+        'body' => 'An important message has been sent to you by the administration',
+        'type' => 'bulk_message',
+]);
+
+
 
         return response()->json([
             'message' => 'Bulk message is being sent',

@@ -269,17 +269,15 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 
 
 // Bulk Messages Routes 
-
-Route::prefix('bulk-messages')->middleware(['auth:api', 'role:admin'])->group(function () {
-
+Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
-    Route::post('/', [BulkMessageController::class, 'store']);
-    Route::post('/{id}/send', [BulkMessageController::class, 'send']);
-    Route::get('/{id}/status', [BulkMessageController::class, 'status']);
+    Route::get('/{id}/status', [BulkMessageController::class,'status']);
+    Route::post('/', [BulkMessageController::class, 'store'])->middleware('role:admin');
+    Route::post('/{id}/send', [BulkMessageController::class, 'send'])->middleware('role:admin');
 });
 
 
-Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . ':admin'])->group(function () {
+Route::prefix('analytics')->middleware(['auth:api', RoleMiddleware::class . 'role:admin'])->group(function () {
     Route::get('/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
     Route::get('/events/{eventId}', [AnalyticsController::class, 'getEventAnalytics']);
     Route::get('/export/{eventId}', [AnalyticsController::class, 'exportEventAnalytics']);
