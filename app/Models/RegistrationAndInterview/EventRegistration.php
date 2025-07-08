@@ -13,7 +13,7 @@ class EventRegistration extends Model
     //
     use HasFactory ,SoftDeletes;
     protected $fillable = [
-        'event_id', 'user_id', 'status', 'registration_type',
+        'qr_code_token', 'event_id', 'user_id', 'status', 'registration_type',
         'registered_at', 'cancelled_at', 'cancellation_reason',
         'checked_in_at', 'checked_in_by', 'check_in_method'
     ];

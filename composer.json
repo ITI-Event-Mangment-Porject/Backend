@@ -19,6 +19,7 @@
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1 || ^4.0",
         "openai-php/laravel": "^0.14.0",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.20",
         "spatie/laravel-query-builder": "^6.3",
         "tymon/jwt-auth": "^2.2"

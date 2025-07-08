@@ -7,6 +7,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\Event\Event;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Facades\Storage;
 use App\Models\RegistrationAndInterview\EventRegistration;
 use App\Models\NotificationsAndMessaging\Notification as CustomNotification;
 
@@ -36,10 +38,19 @@ class EventRegistrationSuccess extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        $qrCode = QrCode::format('png')->size(200)->generate($this->registration->qr_code_token);
+        $qrCodePath = 'qrcodes/' . $this->registration->qr_code_token . '.png';
+        Storage::disk('public')->put($qrCodePath, $qrCode);
+
         return (new MailMessage)
             ->subject("Registration Confirmed: {$this->event->title}")
             ->greeting("Hello {$notifiable->name},")
             ->line("You have successfully registered for: **{$this->event->title}**")
+            ->line("Please find your unique QR code below, which will be required for check-in.")
+            ->attach(storage_path('app/public/' . $qrCodePath), [
+                'as' => 'qrcode.png',
+                'mime' => 'image/png',
+            ])
             ->line("📅 Date: {$this->event->start_date->format('F j, Y')}")
             ->line("⏰ Time: {$this->event->start_time} - {$this->event->end_time}")
             ->line("📍 Location: {$this->event->location}")

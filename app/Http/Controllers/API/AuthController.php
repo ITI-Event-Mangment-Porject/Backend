@@ -13,6 +13,7 @@ use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use App\Http\Controllers\API\BaseApiController;
 use App\Http\Requests\LoginRequest;
+use App\Models\Auth\Track;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ConnectException;
@@ -80,6 +81,10 @@ class AuthController extends BaseApiController
             
             if (!$user) {
                 // Create new user
+                $track = Track::findOrCreate([
+                    'name' => $userData['track'] ?? null,
+                ]);
+                $track = Track::find($userData['track'] ?? null);
                 $user = User::create([
                     'portal_user_id' => $userData['id'],
                     'email' => $userData['email'],
@@ -87,14 +92,15 @@ class AuthController extends BaseApiController
                     'first_name' => $userData['first_name'] ?? null,
                     'last_name' => $userData['last_name'] ?? null,
                     'phone' => $userData['phone'] ?? null,
-                    // 'track_id' => $userData['track_id'] ?? null,
+                    'track_id' => $track->id ?? null,
+                    
                     'intake' => $userData['intake'] ?? null,
                     'graduation_year' => $userData['graduation_year'] ?? null,
-                    'bio' => $userData['bio'] ?? null,
-                    'linkedin_url' => $userData['linkedin_url'] ?? null,
-                    'github_url' => $userData['github_url'] ?? null,
-                    'portfolio_url' => $userData['portfolio_url'] ?? null,
-                    'profile_image' => $userData['profile_image'] ?? null,
+                    'bio' => $userData['summary'] ?? null,
+                    'linkedin_url' => $userData['linkedin'] ?? null,
+                    'github_url' => $userData['github'] ?? null,
+                    'portfolio_url' => $userData['portfolio'] ?? null,
+                    'profile_image' => $userData['profile_picture'] ?? null,
                 ]);
                 $user->assignRole($role);
                 
@@ -237,50 +243,6 @@ class AuthController extends BaseApiController
             ];
         }
     }
-    
-    
-    // private function authenticateWithPortal($email, $password)
-    // {
-    //     try {
-    //         $response = Http::withHeaders([
-    //             'Content-Type' => 'application/json',
-    //             'Accept' => 'application/json',
-    //             'X-API-Key' => env('PORTAL_API_KEY'),
-    //         ])->post(env('PORTAL_API_URL') . '/api/auth/login', [
-    //             'email' => $email,
-    //             'password' => $password,
-    //         ]);
-        
-    //         if ($response->successful()) {
-    //             $body = $response->json();
-            
-    //             if (isset($body['token'], $body['data'])) {
-    //                 return [
-    //                     'success' => true,
-    //                     'data' => $body,
-    //                     'message' => 'Authenticated successfully',
-    //                 ];
-    //             }
-            
-    //             return [
-    //                 'success' => false,
-    //                 'message' => $body['message'] ?? 'Invalid portal response',
-    //             ];
-    //         }
-        
-    //         return [
-    //             'success' => false,
-    //             'message' => $response->json()['message'] ?? 'Authentication failed',
-    //         ];
-        
-    //     } catch (\Exception $e) {
-    //         Log::error('Portal authentication error: ' . $e->getMessage());
-    //         return [
-    //             'success' => false,
-    //             'message' => 'Connection to portal failed: ' . $e->getMessage(),
-    //         ];
-    //     }
-    // }
     
     private function checkProfileComplete($user)
     {

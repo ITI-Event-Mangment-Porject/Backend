@@ -27,6 +27,7 @@ use App\Http\Controllers\Event\EventController;
 use App\Http\Controllers\Event\EventRegistrationController;
 use App\Http\Controllers\Event\EventSessionController;
 use App\Http\Controllers\Event\EventStaffController;
+use App\Http\Controllers\Event\CheckInController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
@@ -138,7 +139,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
         Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
         Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
-        
+        Route::post('/check-in', [CheckInController::class, 'checkIn']);
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
         Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
@@ -334,4 +335,3 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
 });
-

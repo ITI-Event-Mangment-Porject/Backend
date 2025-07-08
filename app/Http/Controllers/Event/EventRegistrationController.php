@@ -17,7 +17,7 @@ use App\Models\RegistrationAndInterview\EventRegistration;
 use App\Models\RegistrationAndInterview\InterviewRequest;
 use App\Notifications\EventRegistrationSuccess;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Str;
 class EventRegistrationController extends BaseApiController
 {
     //
@@ -52,6 +52,7 @@ class EventRegistrationController extends BaseApiController
             
             // Create the registration
             $registration = new EventRegistration([
+                'qr_code_token' => Str::random(32),
                 'event_id' => $event_flexible->id,
                 'user_id' => $userId,
                 'status' => $validatedData['status'] ?? 'registered',
@@ -64,7 +65,7 @@ class EventRegistrationController extends BaseApiController
             
             // Trigger notification (this handles email sending)
             // Create custom notification in your table
-            $this->createCustomNotification($userId, $event_flexible, $registration);
+            // $this->createCustomNotification($userId, $event_flexible, $registration);
 
             // Send email notification (queued)
             $user = auth()->user();
