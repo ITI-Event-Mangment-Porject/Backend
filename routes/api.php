@@ -161,7 +161,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
     });
 
-<<<<<<< HEAD
+
 
     /* Event Registration */
     Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
@@ -173,7 +173,7 @@ Route::prefix('auth')->group(function () {
     Route::get('/{event_flexible}', [EventController::class, 'show']);
     Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
     Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
-});
+
 
 // Routes for User API endpoints (authentication required)
 Route::middleware(['auth:api', 'role:admin'])->prefix('/users')->group(function () {
@@ -227,14 +227,15 @@ Route::middleware(['auth:api'])->prefix('dashboard')->group(function () {
         Route::get('/users', [DashboardController::class, 'adminUsers']);
         Route::get('/companies', [DashboardController::class, 'adminCompanies']);
         Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
-=======
+    });
+});
     // media controller 
     Route::prefix('media')->group(function () {
         Route::post('/upload', [MediaController::class, 'upload']);
         Route::get('/{id}', [MediaController::class, 'download']);
         Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
         Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
->>>>>>> 58422c58ecc96ba2fcc978312e9234fb1ef10a13
+
     });
 
     // dashboard controller
