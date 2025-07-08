@@ -103,8 +103,9 @@ Route::prefix('auth')->group(function () {
     |--------------------------------------------------------------------------
     |
     */
+    Route::get('/events', [EventController::class, 'index']); // List all events
+
     Route::middleware(['auth:api'])->prefix('events')->group(function () {
-        Route::get('/', [EventController::class, 'index']); // List all events
         Route::post('/', [EventController::class, 'store']);
         
         // Specific routes FIRST (these need to come before the generic /{event_flexible})
