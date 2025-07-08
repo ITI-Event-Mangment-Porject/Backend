@@ -184,8 +184,8 @@ Route::prefix('companies')->group(function () {
     Route::get('/', [CompanyController::class, 'index']);
     Route::get('/{id}', [CompanyController::class, 'show']);
     Route::put('/{id}', [CompanyController::class, 'update']);
-    Route::post('/{id}/approve', [CompanyController::class, 'approve']);
-    Route::post('/{id}/reject', [CompanyController::class, 'reject']);
+    Route::post('/{id}/approved', [CompanyController::class, 'approve']);
+    Route::post('/{id}/rejected', [CompanyController::class, 'reject']);
     Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
 });
 
