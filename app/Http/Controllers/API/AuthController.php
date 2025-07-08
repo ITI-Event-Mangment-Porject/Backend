@@ -56,43 +56,15 @@ class AuthController extends BaseApiController
         
         try {
             // Send credentials to Portal system
-            // $portalResponse = $this->authenticateWithPortal($email, $password);
-            
-            $portalResponse = [
-                'success' => true,
-                
-                'data' => [
-                    'token' => 'mocked_token',
-                    'user' => [
-                            'id' => 'PU48494',
-                            'role' => 'admin',
-                            'email' => $email,
-                            'first_name' => 'admin',
-                            'last_name' => 'admin',
-                            'cv_path' => 'cv.pdf',
-                            'phone' => '01012345678',
-                            'track_id' => 1,
-                            'intake_year' => 2023,
-                            'graduation_year' => 2024,
-                            'bio' => 'Sample Bio',
-                            'linkedin_url' => 'https://linkedin.com/in/ahmed',
-                            'github_url' => 'https://github.com/ahmed',
-                            'portfolio_url' => 'https://ahmed.com',
-                            'profile_image' => 'profile.jpg',
-                        ],
-                            
-                    ],
-                'message' => 'Authenticated successfully',
-                ];
+            $portalResponse = $this->authenticateWithPortal($email, $password);
             
             
             if (!$portalResponse['success']) {
                 return $this->sendError($portalResponse['message'], [], 401);
             }
             
-            $portalData = $portalResponse['data'];
-            $portalToken = $portalData['token'];
-            $userData = $portalData['user'];
+            $userData = $portalResponse['data'];
+            // $userData = $portalData['user'];
             
             // Validate required fields from portal response
             if (!isset($userData['id'], $userData['role'], $userData['first_name'], $userData['last_name'], $userData['email'])) {
@@ -111,12 +83,12 @@ class AuthController extends BaseApiController
                 $user = User::create([
                     'portal_user_id' => $userData['id'],
                     'email' => $userData['email'],
-                    'cv_path' => $userData['cv_path'] ?? null,
+                    // 'cv_path' => $userData['cv_path'] ?? null,
                     'first_name' => $userData['first_name'] ?? null,
                     'last_name' => $userData['last_name'] ?? null,
                     'phone' => $userData['phone'] ?? null,
-                    'track_id' => $userData['track_id'] ?? null,
-                    'intake_year' => $userData['intake_year'] ?? null,
+                    // 'track_id' => $userData['track_id'] ?? null,
+                    'intake' => $userData['intake'] ?? null,
                     'graduation_year' => $userData['graduation_year'] ?? null,
                     'bio' => $userData['bio'] ?? null,
                     'linkedin_url' => $userData['linkedin_url'] ?? null,
@@ -136,8 +108,8 @@ class AuthController extends BaseApiController
                     'user' => $user,
                     'access_token' => $accessToken,
                     'refresh_token' => $refreshToken,
-                    'portal_token' => $portalToken,
                     'profile_complete' => false,
+                    'role' => $user->getRoleNames()->first(),
                 ], 'User created. Profile completion required.');
             }
             
@@ -174,8 +146,9 @@ class AuthController extends BaseApiController
                 'role' => $user->getRoleNames()->first(),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                'portal_token' => $portalToken,
-                'profile_complete' => $profileComplete
+                // 'portal_token' => $portalToken,
+                'profile_complete' => $profileComplete,
+                'role' => $user->getRoleNames()->first(),
             ], 'Login successful');
             
         }
@@ -207,7 +180,7 @@ class AuthController extends BaseApiController
     private function authenticateWithPortal($email, $password)
     {
         try {
-            $response = $this->httpClient->post(env('PORTAL_API_URL') . '/api/auth/login', [
+            $response = $this->httpClient->post(env('PORTAL_API_URL') . '/api/auth/external-login', [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
@@ -222,26 +195,46 @@ class AuthController extends BaseApiController
             $statusCode = $response->getStatusCode();
             $body = json_decode($response->getBody()->getContents(), true);
             
-            if ($statusCode === 200 && isset($body['token']) && isset($body['data'])) {
-                return $this->sendResponse($body, 'Authenticated successfully');
+           // Check for a 200 status and the success flag from the portal's response
+            if ($statusCode === 200 && isset($body['success']) && $body['success'] === true && isset($body['data'])) {
+                // The login method expects the user data, not the whole body.
+                // So we should return the nested 'data' object.
+                return [
+                    'success' => true,
+                    'message' => $body['message'],
+                    'data'    => $body['data'] // Return the actual user data object
+                ];
             }
     
-            return $this->sendError($body['message'] ?? 'Authentication failed',[], 401);
+            return [
+                'success' => false,
+                'message' => $body['message'] ?? 'Authentication failed'
+            ];
             
         } catch (RequestException $e) {
             $response = $e->getResponse();
             if ($response) {
                 $body = json_decode($response->getBody()->getContents(), true);
-                return $this->sendError($body['message'] ?? 'Invalid credentials',[], $response->getStatusCode());
+                return [
+                    'success' => false,
+                    'message' => $body['message'] ?? 'Invalid credentials'
+                ];
             }
-    
-            return $this->sendError('Connection to portal failed',[], 500);
-        }
-        catch (ConnectException $e) {
-            return $this->sendError('Unable to connect to authentication server', [], 503);
+            return [
+                'success' => false,
+                'message' => 'Connection to portal failed'
+            ];
+        } catch (ConnectException $e) {
+            return [
+                'success' => false,
+                'message' => 'Unable to connect to authentication server'
+            ];
         } catch (\Exception $e) {
             Log::error('Portal authentication error: ' . $e->getMessage());
-            return $this->sendError('Authentication failed', [], 500);
+            return [
+                'success' => false,
+                'message' => 'Authentication failed due to an unexpected error'
+            ];
         }
     }
     
