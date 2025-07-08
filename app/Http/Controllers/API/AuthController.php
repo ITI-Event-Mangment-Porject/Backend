@@ -58,7 +58,7 @@ class AuthController extends BaseApiController
         try {
             // Send credentials to Portal system
             $portalResponse = $this->authenticateWithPortal($email, $password);
-            
+            // dd($portalResponse);
             
             if (!$portalResponse['success']) {
                 return $this->sendError($portalResponse['message'], [], 401);
@@ -81,9 +81,7 @@ class AuthController extends BaseApiController
             
             if (!$user) {
                 // Create new user
-                $track = Track::findOrCreate([
-                    'name' => $userData['track'] ?? null,
-                ]);
+                
                 $track = Track::find($userData['track'] ?? null);
                 $user = User::create([
                     'portal_user_id' => $userData['id'],
@@ -154,7 +152,6 @@ class AuthController extends BaseApiController
                 'refresh_token' => $refreshToken,
                 // 'portal_token' => $portalToken,
                 'profile_complete' => $profileComplete,
-                'role' => $user->getRoleNames()->first(),
             ], 'Login successful');
             
         }
@@ -179,7 +176,7 @@ class AuthController extends BaseApiController
         }
          catch (\Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
-            return $this->sendError('Login failed', [], 500);
+            return $this->sendError('Login failed', ['error'=>$e->getMessage()], 500);
         }
     }
     
