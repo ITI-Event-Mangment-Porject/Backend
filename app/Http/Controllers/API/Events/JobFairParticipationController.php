@@ -12,6 +12,9 @@ use App\Http\Requests\Events\UpdateJobFairParticipationRequest;
 use App\Http\Requests\Events\ReviewJobFairParticipationRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use App\Models\Auth\User;
+use App\Notifications\JobFairParticipationApproved;
+use Illuminate\Support\Facades\Notification;
 
 class JobFairParticipationController extends BaseApiController
 {
@@ -81,15 +84,36 @@ class JobFairParticipationController extends BaseApiController
             if ($validated['status'] === 'approved') {
                 $participation->company->update([
                     'is_approved' => true,
+                    'status' => 'approved', // Update the status field in the Company model
                     'approved_by' => auth()->id(),
                     'approved_at' => now(),
                 ]);
 
                 // Auto-publish event if all selected logic applies
                 $event = $participation->event;
-                if ($event->type === 'Job Fair' && $event->status === 'draft') {
+                $originalStatus = $event->status; // Store original status
+
+                if ($event->type === 'Job Fair' && $originalStatus === 'draft') {
                     $event->update(['status' => 'published']);
+
+                    if ($event->status === 'published') {
+                        // Notify ALL students
+                        $students = User::whereHas('roles', function ($query) {
+                            $query->where('name', 'student');
+                        })->get();
+
+                        foreach ($students as $student) {
+                            $student->notify(new JobFairParticipationApproved($event));
+                        }
+                    }
                 }
+            } elseif ($validated['status'] === 'rejected') {
+                $participation->company->update([
+                    'is_approved' => false,
+                    'status' => 'rejected', // Update the status field in the Company model to rejected
+                    'approved_by' => null, // Clear approved_by
+                    'approved_at' => null, // Clear approved_at
+                ]);
             }
 
             return $this->sendResponse(

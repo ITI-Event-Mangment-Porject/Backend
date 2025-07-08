@@ -161,12 +161,81 @@ Route::prefix('auth')->group(function () {
         Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
     });
 
+
+
+    /* Event Registration */
+    Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
+    Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
+    Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
+    Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student'); // Check-in to an event (student only)
+
+    // Generic routes LAST
+    Route::get('/{event_flexible}', [EventController::class, 'show']);
+    Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
+    Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
+
+
+// Routes for User API endpoints (authentication required)
+Route::middleware(['auth:api', 'role:admin'])->prefix('/users')->group(function () {
+    Route::get('/', [UserController::class, 'index']);                // Listing users with filters & pagination
+    Route::post('/', [UserController::class, 'store']);               // Creating a user
+    Route::get('/{id}', [UserController::class, 'show']);             // Showing a user
+    Route::put('/{id}', [UserController::class, 'update']);           // Updating a user
+    Route::delete('/{id}', [UserController::class, 'destroy']);       // Deleting a user
+});
+
+// Routes for Track API endpoints ( authentication required)
+Route::middleware(['auth:api','role:admin'])->prefix('/tracks')->group(function () {
+    Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
+    Route::post('/', [TrackController::class, 'store']);               // Test creating a track
+    Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
+    Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
+    Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
+});
+
+
+//companyController still need admin middleware 
+Route::prefix('companies')->group(function () {
+    Route::post('/', [CompanyController::class, 'store']);
+    Route::get('/', [CompanyController::class, 'index']);
+    Route::get('/{id}', [CompanyController::class, 'show']);
+    Route::put('/{id}', [CompanyController::class, 'update']);
+    Route::post('/{id}/approved', [CompanyController::class, 'approve']);
+    Route::post('/{id}/rejected', [CompanyController::class, 'reject']);
+    Route::post('/{id}/logo', [CompanyController::class, 'uploadLogo']);
+});
+
+// media controller 
+Route::prefix('media')->group(function () {
+    Route::post('/upload', [MediaController::class, 'upload']);
+    Route::get('/{id}', [MediaController::class, 'download']);
+    Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
+    Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
+});
+
+// dashboard controller
+Route::middleware(['auth:api'])->prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index']);
+    Route::get('/admin', [DashboardController::class, 'adminDashboard']);
+    Route::get('/company', [DashboardController::class, 'companyDashboard'])->middleware('role:company');
+    Route::get('/staff', [DashboardController::class, 'staffDashboard'])->middleware('role:staff');
+
+    // admin subroutes
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/overview', [DashboardController::class, 'adminOverview']);
+        Route::get('/events', [DashboardController::class, 'adminEvents']);
+        Route::get('/users', [DashboardController::class, 'adminUsers']);
+        Route::get('/companies', [DashboardController::class, 'adminCompanies']);
+        Route::get('/live-events', [DashboardController::class, 'adminLiveEvents']);
+    });
+});
     // media controller 
     Route::prefix('media')->group(function () {
         Route::post('/upload', [MediaController::class, 'upload']);
         Route::get('/{id}', [MediaController::class, 'download']);
         Route::get('/{id}/public', [MediaController::class, 'publicAccess']);
         Route::delete('/{id}', [MediaController::class, 'destroy']); //by admin
+
     });
 
     // dashboard controller
