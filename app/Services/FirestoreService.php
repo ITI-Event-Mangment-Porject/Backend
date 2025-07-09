@@ -12,14 +12,14 @@ class FirestoreService
          $this->db = $firestore->database();
     }
 
-        public function sendToAllUsers(array $data)
-    {
-        $users = User::pluck('id'); 
+    //     public function sendToAllUsers(array $data)
+    // {
+    //     $users = User::pluck('id'); 
 
-        foreach ($users as $userId) {
-            $this->send($userId, $data);
-        }
-    }
+    //     foreach ($users as $userId) {
+    //         $this->send($userId, $data);
+    //     }
+    // }
 
 
     public function send ($reciever_id,$data){

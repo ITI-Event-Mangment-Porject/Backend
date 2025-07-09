@@ -12,12 +12,13 @@ use Illuminate\Validation\Rule;
 use App\Services\FirestoreService;
 
 class BulkMessageController extends Controller
-
 {
-      public function __construct(FirestoreService $firebase)
-    {
-        $this->firebase = $firebase;
-    }
+
+//   protected $firebase;
+//       public function __construct(FirestoreService $firebase)
+//     {
+//         $this->firebase = $firebase;
+//     }
     use AuthorizesRequests;
 
     /**
@@ -88,11 +89,11 @@ class BulkMessageController extends Controller
         $message->update(['status' => 'sending']);
       
       
-        $this->firebase->sendToAllUsers([
-        'title' => 'Important Message',
-        'body' => 'An important message has been sent to you by the administration',
-        'type' => 'bulk_message',
-]);
+//         $this->firebase->sendToAllUsers([
+//         'title' => 'Testing Message',
+//         'body' => 'An important message has been sent to you by the administration',
+//         'type' => 'bulk_message',
+// ]);
 
 
 
