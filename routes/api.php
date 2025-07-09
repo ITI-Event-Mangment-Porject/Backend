@@ -385,7 +385,7 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->name('ai.insights.detailed');
     
     // Get all AI insights (Admin only)
-    Route::get('/', [AIInsightsController::class, 'getAllInsights'])
+    Route::get('/all', [AIInsightsController::class, 'getAllInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.index');
     
