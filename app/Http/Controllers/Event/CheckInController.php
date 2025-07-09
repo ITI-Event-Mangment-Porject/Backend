@@ -16,7 +16,9 @@ class CheckInController extends BaseApiController
         ]);
 
         try {
-            $registration = EventRegistration::where('qr_code_token', $request->token)->firstOrFail();
+            $registration = EventRegistration::with(['user', 'event'])
+                ->where('qr_code_token', $request->token)
+                ->firstOrFail();
 
             if ($registration->isCheckedIn()) {
                 return $this->sendError('User has already been checked in.', [], 422);
@@ -25,14 +27,20 @@ class CheckInController extends BaseApiController
             $registration->update([
                 'status' => 'attended',
                 'checked_in_at' => now(),
-                'check_in_method' => 'qr_code',
+                'check_in_method' => 'qr',
             ]);
 
-            return $this->sendResponse($registration, 'Check-in successful.');
+            $responseData = [
+                'event_name' => $registration->event->name,
+                'user_name' => $registration->user->first_name . ' ' . $registration->user->last_name,
+                'checked_in_at' => $registration->checked_in_at,
+            ];
+
+            return $this->sendResponse($responseData, 'Check-in successful.');
 
         } catch (\Exception $e) {
             Log::error('Check-in failed: ' . $e->getMessage());
-            return $this->sendError('Check-in failed. Please try again.', [], 500);
+            return $this->sendError('Check-in failed. Please try again.', [$e->getMessage()], 500);
         }
     }
 }

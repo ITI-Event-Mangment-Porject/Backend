@@ -63,14 +63,14 @@ Route::middleware(['auth:api'])->prefix('/users')->group(function () {
     Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
 });
 
-// Test routes for Track API endpoints (no authentication required)
-Route::prefix('test/tracks')->group(function () {
-    Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
-    Route::post('/', [TrackController::class, 'store']);               // Test creating a track
-    Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
-    Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
-    Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
-});
+// // Test routes for Track API endpoints (no authentication required)
+// Route::prefix('test/tracks')->group(function () {
+//     Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
+//     Route::post('/', [TrackController::class, 'store']);               // Test creating a track
+//     Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
+//     Route::put('/{id}', [TrackController::class, 'update']);           // Test updating a track
+//     Route::delete('/{id}', [TrackController::class, 'destroy']);       // Test deleting a track
+// });
 
 // Test routes for LiveEvent API endpoints (no authentication required for testing)
 Route::prefix('test/live')->group(function () {
@@ -139,7 +139,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
         Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
         Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
-        Route::post('/check-in', [CheckInController::class, 'checkIn']);
+        Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student');
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
         Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
@@ -167,7 +167,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/{event_flexible}/register', [EventRegistrationController::class, 'register']);
     Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
     Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
-    Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student'); // Check-in to an event (student only)
+    // Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student'); // Check-in to an event (student only)
 
     // Generic routes LAST
     Route::get('/{event_flexible}', [EventController::class, 'show']);
@@ -177,7 +177,7 @@ Route::prefix('auth')->group(function () {
 
 
 // Routes for Track API endpoints ( authentication required)
-Route::middleware(['auth:api','role:admin'])->prefix('/tracks')->group(function () {
+Route::middleware(['auth:api','role:admin'])->prefix('user/tracks')->group(function () {
     Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
     Route::post('/', [TrackController::class, 'store']);               // Test creating a track
     Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track
