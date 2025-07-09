@@ -53,8 +53,8 @@ class UpdateUserRequest extends BaseApiRequest
             'linkedin_url' => ['nullable', 'url'],
             'github_url' => ['nullable', 'url'],
             'portfolio_url' => ['nullable', 'url'],
-            'profile_image' => ['nullable'],
-            'cv_path' => ['nullable'],
+            'profile_image' => ['nullable', 'file', 'image', 'max:2048'], // Allow image files up to 2MB
+            'cv_path' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'], // Allow PDF/Word files up to 5MB
         ];
     }
 
@@ -72,6 +72,10 @@ class UpdateUserRequest extends BaseApiRequest
             'linkedin_url.url' => 'Please enter a valid LinkedIn URL.',
             'github_url.url' => 'Please enter a valid GitHub URL.',
             'portfolio_url.url' => 'Please enter a valid portfolio URL.',
+            'profile_image.image' => 'The profile image must be an image file.',
+            'profile_image.max' => 'The profile image must not be larger than 2MB.',
+            'cv_path.mimes' => 'The CV must be a PDF or Word document.',
+            'cv_path.max' => 'The CV must not be larger than 5MB.',
         ];
     }
 

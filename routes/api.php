@@ -54,13 +54,14 @@ Route::get('/test-connection', function () {
     return response()->json(['status' => 'working']);
 });
 
-// Test routes for User API endpoints (no authentication required)
+//  routes for User API endpoints 
 Route::middleware(['auth:api'])->prefix('/users')->group(function () {
-    Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
-    Route::post('/', [UserController::class, 'store']);               // Test creating a user
-    Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
-    Route::put('/{id}', [UserController::class, 'update']);           // Test updating a user
-    Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
+    Route::get('/', [UserController::class, 'index']);               
+    Route::post('/', [UserController::class, 'store']);             
+    Route::get('/{id}', [UserController::class, 'show']);             
+    Route::post('/{id}', [UserController::class, 'update']);
+    Route::match(['put', 'patch'], '/{id}', [UserController::class, 'update']);
+    Route::delete('/{id}', [UserController::class, 'destroy']);     
 });
 
 // // Test routes for Track API endpoints (no authentication required)
@@ -378,7 +379,7 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
         ->name('ai.insights.detailed');
     
     // Get all AI insights (Admin only)
-    Route::get('/', [AIInsightsController::class, 'getAllInsights'])
+    Route::get('/all', [AIInsightsController::class, 'getAllInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.index');
     
