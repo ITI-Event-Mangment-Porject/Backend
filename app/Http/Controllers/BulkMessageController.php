@@ -14,11 +14,11 @@ use App\Services\FirestoreService;
 class BulkMessageController extends Controller
 {
 
-//   protected $firebase;
-//       public function __construct(FirestoreService $firebase)
-//     {
-//         $this->firebase = $firebase;
-//     }
+    protected $firebase;
+      public function __construct(FirestoreService $firebase)
+    {
+        $this->firebase = $firebase;
+    }
     use AuthorizesRequests;
 
     /**
@@ -27,7 +27,6 @@ class BulkMessageController extends Controller
      */
     public function index(Request $request)
     {
-        $this->authorize('viewAny', BulkMessage::class);
 
         $messages = BulkMessage::with('sentBy')
             ->orderBy('created_at', 'desc')

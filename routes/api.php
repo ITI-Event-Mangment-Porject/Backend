@@ -303,7 +303,8 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::put('{jobFairId}/queues/{queueId}/pending', [InterviewQueueController::class, 'pending']);
     Route::put('{jobFairId}/queues/{queueId}/resume', [InterviewQueueController::class, 'resume']);
     Route::put('{jobFairId}/queues/{queueId}/requeue-last', [InterviewQueueController::class, 'requeueLast']);
-    Route::put('{jobFairId}/queues/{queueId}/next', [InterviewQueueController::class, 'next']);
+    Route::post('{jobFairId}/queues/slot/{slotId}/next', [InterviewQueueController::class, 'next'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::post('{jobFairId}/queues/{queueId}/end-interview', [InterviewQueueController::class, 'endInterview'])->middleware('check.any.role:admin,staff,company_representative');
     Route::delete('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'removeFromQueue']);
 
 });
@@ -328,7 +329,7 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
 
 // Notifications Routes 
 
-Route::prefix('notifications')->middleware('auth:api')->group(function () {
+Route::prefix('notify/notifications')->middleware('auth:api')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
@@ -338,7 +339,7 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 });
 
 // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
+Route::prefix('message/bulk-message')->middleware('auth:api')->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::get('/{id}/status', [BulkMessageController::class,'status']);
     Route::post('/', [BulkMessageController::class, 'store'])->middleware('role:admin');

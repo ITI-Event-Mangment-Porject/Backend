@@ -111,7 +111,7 @@ class NotificationController extends Controller
 
          $this->firebase->send($data['user_id'], [
             'title' => 'New Feedback Form',
-            'body' => 'A new feedback form has been created for the event: ',
+            'body' => $data['message'],
             'type' => 'feedback_form',
 ]);
 
