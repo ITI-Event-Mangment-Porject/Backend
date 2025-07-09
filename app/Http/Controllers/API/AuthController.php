@@ -14,6 +14,7 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 use App\Http\Controllers\API\BaseApiController;
 use App\Http\Requests\LoginRequest;
 use App\Models\Auth\Track;
+use App\Models\JobFair\JobFairParticipation; // Import JobFairParticipation model
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ConnectException;
@@ -128,16 +129,34 @@ class AuthController extends BaseApiController
             ])->fromUser($user);
             
             // Check profile completion
+            // Check profile completion
             $profileComplete = $this->checkProfileComplete($user);
-            
-            return $this->sendResponse([
+
+            $responseData = [
                 'user' => $user,
                 'role' => $user->getRoleNames()->first(),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                // 'portal_token' => $portalToken,
                 'profile_complete' => $profileComplete,
-            ], 'Login successful');
+            ];
+
+            // If the user is a company_representative, fetch the most recent job fair participation details
+            if ($user->hasRole('company_representative')) {
+                $mostRecentParticipation = JobFairParticipation::where('submitted_by', $user->id)
+                    ->latest() // Order by latest created_at
+                    ->select('id', 'company_id') // Select only necessary fields
+                    ->first(); // Get only the first (most recent) record
+
+                if ($mostRecentParticipation) {
+                    $responseData['job_fair_participation_id'] = $mostRecentParticipation->id;
+                    $responseData['company_id'] = $mostRecentParticipation->company_id;
+                } else {
+                    $responseData['job_fair_participation_id'] = null;
+                    $responseData['company_id'] = null;
+                }
+            }
+            
+            return $this->sendResponse($responseData, 'Login successful');
             
         }
          catch (ConnectException $e) {
