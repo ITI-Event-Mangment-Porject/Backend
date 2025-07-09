@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\API\Events\BrandingDayController;
 use App\Http\Controllers\API\Events\InterviewQueueController;
 use App\Http\Controllers\API\Events\InterviewRequestController;
@@ -7,7 +6,6 @@ use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
 use App\Http\Controllers\API\Events\LiveEventController;
-
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
@@ -31,6 +29,8 @@ use App\Http\Controllers\Event\CheckInController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ReportController;
 
 use App\Models\Auth\User;
 
@@ -396,4 +396,19 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
     Route::get('/events-needing-insights', [AIInsightsController::class, 'getEventsNeedingInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
+});
+
+//setting controller  missing middleware of admin
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SettingController::class, 'index']);
+    Route::put('/{key}', [SettingController::class, 'update']);
+    Route::get('/public', [SettingController::class, 'getPublic']); // all public settings
+});
+
+// missing middleware
+Route::prefix('/reports')->group(function () {
+    Route::get('/events', [ReportController::class, 'eventsReports']);
+    Route::get('/attendance', [ReportController::class, 'attendanceReports']);
+    Route::get('/feedback', [ReportController::class, 'feedbackReports']);
+    Route::get('/export', [ReportController::class, 'exportReports']);
 });
