@@ -54,17 +54,18 @@ Route::get('/test-connection', function () {
     return response()->json(['status' => 'working']);
 });
 
-// Test routes for User API endpoints (no authentication required)
+//  routes for User API endpoints 
 Route::middleware(['auth:api'])->prefix('/users')->group(function () {
-    Route::get('/', [UserController::class, 'index']);                // Test listing users with filters & pagination
-    Route::post('/', [UserController::class, 'store']);               // Test creating a user
-    Route::get('/{id}', [UserController::class, 'show']);             // Test showing a user
-    Route::put('/{id}', [UserController::class, 'update']);           // Test updating a user
-    Route::delete('/{id}', [UserController::class, 'destroy']);       // Test deleting a user
+    Route::get('/', [UserController::class, 'index']);               
+    Route::post('/', [UserController::class, 'store']);             
+    Route::get('/{id}', [UserController::class, 'show']);             
+    Route::post('/{id}', [UserController::class, 'update']);
+    Route::match(['put', 'patch'], '/{id}', [UserController::class, 'update']);
+    Route::delete('/{id}', [UserController::class, 'destroy']);     
 });
 
 // Test routes for Track API endpoints (no authentication required)
-Route::prefix('test/tracks')->group(function () {
+Route::prefix('/tracks')->group(function () {
     Route::get('/', [TrackController::class, 'index']);                // Test listing tracks with filters & pagination
     Route::post('/', [TrackController::class, 'store']);               // Test creating a track
     Route::get('/{id}', [TrackController::class, 'show']);             // Test showing a track

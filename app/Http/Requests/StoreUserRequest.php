@@ -38,8 +38,8 @@ class StoreUserRequest extends BaseApiRequest
             'linkedin_url' => ['nullable', 'url'],
             'github_url' => ['nullable', 'url'],
             'portfolio_url' => ['nullable', 'url'],
-            'profile_image' => ['nullable'],
-            'cv_path' => ['nullable'],
+            'profile_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'cv_path' => ['nullable','file', 'mimes:pdf,doc,docx', 'max:5120'],
         ];
     }
 
@@ -63,6 +63,12 @@ class StoreUserRequest extends BaseApiRequest
             'linkedin_url.url' => 'Please enter a valid LinkedIn URL.',
             'github_url.url' => 'Please enter a valid GitHub URL.',
             'portfolio_url.url' => 'Please enter a valid portfolio URL.',
+            'profile_image.image' => 'The profile image must be an image file.',
+            'profile_image.max' => 'The profile image must not be larger than 2MB.',
+            'profile_image.mimes' => 'The profile image must be a JPEG, PNG, JPG, or WebP file.',
+            'cv_path.file' => 'The CV must be a file.',
+            'cv_path.max' => 'The CV must not be larger than 5MB.',
+            'cv_path.mimes' => 'The CV must be a PDF or Word document.',
         ];
     }
 
