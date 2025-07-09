@@ -175,14 +175,6 @@ Route::prefix('auth')->group(function () {
     Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
 
 
-// Routes for User API endpoints (authentication required)
-Route::middleware(['auth:api', 'role:admin'])->prefix('/users')->group(function () {
-    Route::get('/', [UserController::class, 'index']);                // Listing users with filters & pagination
-    Route::post('/', [UserController::class, 'store']);               // Creating a user
-    Route::get('/{id}', [UserController::class, 'show']);             // Showing a user
-    Route::put('/{id}', [UserController::class, 'update']);           // Updating a user
-    Route::delete('/{id}', [UserController::class, 'destroy']);       // Deleting a user
-});
 
 // Routes for Track API endpoints ( authentication required)
 Route::middleware(['auth:api','role:admin'])->prefix('/tracks')->group(function () {
