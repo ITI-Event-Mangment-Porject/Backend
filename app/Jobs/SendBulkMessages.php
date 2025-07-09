@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\NotificationsAndMessaging\BulkMessage;
 use App\Models\Auth\User;
+use App\Models\NotificationsAndMessaging\Notification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -26,12 +27,11 @@ class SendBulkMessages implements ShouldQueue
     {
         $criteria = $this->message->target_criteria;
 
-        // استخراج المستخدمين حسب الدور
         $users = User::when(isset($criteria['roles']), function ($query) use ($criteria) {
-                        return $query->whereHas('roles', function ($q) use ($criteria) {
-                            $q->whereIn('name', $criteria['roles']);
-                        });
-                    })->get();
+            return $query->whereHas('roles', function ($q) use ($criteria) {
+                $q->whereIn('name', $criteria['roles']);
+            });
+        })->get();
 
         $this->message->update([
             'total_recipients' => $users->count()
@@ -57,7 +57,15 @@ class SendBulkMessages implements ShouldQueue
 
     protected function sendToUser(User $user)
     {
-        // الإرسال الفعلي (مثلاً إشعار داخلي)
-        $user->notify(new \App\Notifications\BulkMessageNotification($this->message));
+        Notification::create([
+            'user_id'      => $user->id,
+            'title'        => $this->message->title,
+            'message'      => $this->message->message,
+            'type'         => 'bulk_message',
+            'related_id'   => $this->message->id,
+            'related_type' => BulkMessage::class,
+            'is_read'      => false,
+            'sent_via'     => ['database'],
+        ]);
     }
 }

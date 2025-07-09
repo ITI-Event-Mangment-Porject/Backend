@@ -56,10 +56,17 @@ class EventController extends BaseApiController
                     'sessions',
                     'registrations',
                     'staffAssignments',
+                    'feedbackForms'
                 ])
-                ->with(['creator:id,first_name,last_name']);
+                ->with(['creator:id,first_name,last_name'])
+                ->withCount('feedbackForms');
 
             $events = $eventsQuery->paginate($perPage, ['*'], 'page', $page);
+
+            $events->getCollection()->transform(function ($event) {
+                $event->has_feedback_form = $event->feedback_forms_count > 0;
+                return $event;
+            });
 
             if ($events->count() === 0) {
                 return $this->sendError('No events found', [], 404);

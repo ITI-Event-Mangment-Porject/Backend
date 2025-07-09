@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\API\Events\BrandingDayController;
 use App\Http\Controllers\API\Events\InterviewQueueController;
 use App\Http\Controllers\API\Events\InterviewRequestController;
@@ -7,7 +6,6 @@ use App\Http\Controllers\API\Events\InterviewSlotController;
 use App\Http\Controllers\API\Events\JobFairController;
 use App\Http\Controllers\API\Events\JobFairParticipationController;
 use App\Http\Controllers\API\Events\LiveEventController;
-
 use App\Http\Controllers\API\Events\JobProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MediaController;
@@ -31,6 +29,8 @@ use App\Http\Controllers\Event\CheckInController;
 use App\Http\Controllers\LiveQueueController;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ReportController;
 
 use App\Models\Auth\User;
 
@@ -175,14 +175,6 @@ Route::prefix('auth')->group(function () {
     Route::delete('/{event_flexible}', [EventController::class, 'destroy'])->middleware('role:admin');
 
 
-// Routes for User API endpoints (authentication required)
-Route::middleware(['auth:api', 'role:admin'])->prefix('/users')->group(function () {
-    Route::get('/', [UserController::class, 'index']);                // Listing users with filters & pagination
-    Route::post('/', [UserController::class, 'store']);               // Creating a user
-    Route::get('/{id}', [UserController::class, 'show']);             // Showing a user
-    Route::put('/{id}', [UserController::class, 'update']);           // Updating a user
-    Route::delete('/{id}', [UserController::class, 'destroy']);       // Deleting a user
-});
 
 // Routes for Track API endpoints ( authentication required)
 Route::middleware(['auth:api','role:admin'])->prefix('/tracks')->group(function () {
@@ -311,7 +303,8 @@ Route::middleware(['auth:api'])->prefix('job-fairs')->group(function(){
     Route::put('{jobFairId}/queues/{queueId}/pending', [InterviewQueueController::class, 'pending']);
     Route::put('{jobFairId}/queues/{queueId}/resume', [InterviewQueueController::class, 'resume']);
     Route::put('{jobFairId}/queues/{queueId}/requeue-last', [InterviewQueueController::class, 'requeueLast']);
-    Route::put('{jobFairId}/queues/{queueId}/next', [InterviewQueueController::class, 'next']);
+    Route::post('{jobFairId}/queues/slot/{slotId}/next', [InterviewQueueController::class, 'next'])->middleware('check.any.role:admin,staff,company_representative');
+    Route::post('{jobFairId}/queues/{queueId}/end-interview', [InterviewQueueController::class, 'endInterview'])->middleware('check.any.role:admin,staff,company_representative');
     Route::delete('{jobFairId}/queues/{queueId}', [InterviewQueueController::class, 'removeFromQueue']);
 
 });
@@ -336,7 +329,7 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
 
 // Notifications Routes 
 
-Route::prefix('notifications')->middleware('auth:api')->group(function () {
+Route::prefix('notify/notifications')->middleware('auth:api')->group(function () {
     Route::get('/', [NotificationController::class, 'index']);
     Route::put('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
@@ -346,7 +339,7 @@ Route::prefix('notifications')->middleware('auth:api')->group(function () {
 });
 
 // Bulk Messages Routes 
-Route::prefix('bulk-messages')->middleware('auth:api')->group(function () {
+Route::prefix('message/bulk-message')->middleware('auth:api')->group(function () {
     Route::get('/', [BulkMessageController::class, 'index']);
     Route::get('/{id}/status', [BulkMessageController::class,'status']);
     Route::post('/', [BulkMessageController::class, 'store'])->middleware('role:admin');
@@ -403,4 +396,19 @@ Route::prefix('ai-insights')->middleware(['auth:api'])->group(function () {
     Route::get('/events-needing-insights', [AIInsightsController::class, 'getEventsNeedingInsights'])
         ->middleware('check.any.role:admin')
         ->name('ai.insights.events.needing');
+});
+
+//setting controller  missing middleware of admin
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SettingController::class, 'index']);
+    Route::put('/{key}', [SettingController::class, 'update']);
+    Route::get('/public', [SettingController::class, 'getPublic']); // all public settings
+});
+
+// missing middleware
+Route::prefix('/reports')->group(function () {
+    Route::get('/events', [ReportController::class, 'eventsReports']);
+    Route::get('/attendance', [ReportController::class, 'attendanceReports']);
+    Route::get('/feedback', [ReportController::class, 'feedbackReports']);
+    Route::get('/export', [ReportController::class, 'exportReports']);
 });
