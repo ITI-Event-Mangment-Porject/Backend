@@ -119,23 +119,6 @@ class AuthController extends BaseApiController
                 ], 'User created. Profile completion required.');
             }
             
-            // Update existing user with latest data from portal
-            $user->update([
-                'email' => $userData['email'],
-                'cv_path' => $userData['cv_path'] ?? $user->cv_path,
-                'first_name' => $userData['first_name'] ?? $user->first_name,
-                'last_name' => $userData['last_name'] ?? $user->last_name,
-                'phone' => $userData['phone'] ?? $user->phone,
-                'track_id' => $userData['track_id'] ?? $user->track_id,
-                'intake_year' => $userData['intake_year'] ?? $user->intake_year,
-                'graduation_year' => $userData['graduation_year'] ?? $user->graduation_year,
-                'bio' => $userData['bio'] ?? $user->bio,
-                'linkedin_url' => $userData['linkedin_url'] ?? $user->linkedin_url,
-                'github_url' => $userData['github_url'] ?? $user->github_url,
-                'portfolio_url' => $userData['portfolio_url'] ?? $user->portfolio_url,
-                'profile_image' => $userData['profile_image'] ?? $user->profile_image,
-            ]);
-            $user->syncRoles($role);
             
             // Generate local tokens
             $accessToken = JWTAuth::fromUser($user);
