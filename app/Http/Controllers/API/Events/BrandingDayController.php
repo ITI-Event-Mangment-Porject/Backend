@@ -139,6 +139,7 @@ class BrandingDayController extends BaseApiController
             'start_time' => $slot->start_time,
             'end_time' => $slot->end_time,
             'order' => $slot->order,
+            'branding_day_speaker_id' => $slot->branding_day_speaker_id,
         ], 'Schedule slot updated.');
     }
 
