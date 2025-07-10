@@ -352,71 +352,133 @@ class InterviewQueueController extends BaseApiController
 
     public function pending(Request $request, $jobFairId, $queueId)
     {
-        return $this->updateStatus($jobFairId, $queueId, 'pending');
+        try {
+            $queue = InterviewQueue::where('id', $queueId)
+                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
+                    $q->where('event_id', $jobFairId);
+                })
+                ->firstOrFail();
+
+            // Preserve order_key, just update status
+            $queue->update(['status' => 'pending']);
+
+            // You might want to broadcast this status change to the frontend
+            // broadcast(new QueueUpdated($queue->slot_id))->toOthers();
+
+            return $this->sendResponse(
+                ['queue_id' => $queue->id, 'status' => $queue->status],
+                'Student status set to pending.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Queue entry not found.');
+        } catch (\Exception $e) {
+            return $this->sendError('An error occurred while updating the queue entry.', [$e->getMessage()], 500);
+        }
     }
 
     public function resume(Request $request, $jobFairId, $queueId)
     {
-        return $this->updateStatus($jobFairId, $queueId, 'waiting');
+        try {
+            $queue = InterviewQueue::where('id', $queueId)
+                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
+                    $q->where('event_id', $jobFairId);
+                })
+                ->where('status', 'pending') // Can only resume a pending student
+                ->firstOrFail();
+
+            // Simply change the status back to waiting. The order_key is preserved.
+            $queue->update(['status' => 'waiting']);
+
+            // You might want to broadcast this status change to the frontend
+            // broadcast(new QueueUpdated($queue->slot_id))->toOthers();
+
+            return $this->sendResponse(
+                ['queue_id' => $queue->id, 'status' => $queue->status],
+                'Student has resumed their position in the queue.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Pending queue entry not found.');
+        } catch (\Exception $e) {
+            return $this->sendError('An error occurred while resuming the student.', [$e->getMessage()], 500);
+        }
     }
 
     public function next(Request $request, $jobFairId, $slotId)
     {
-        // Start a database transaction to ensure all or nothing is updated.
         DB::beginTransaction();
-
         try {
-            // 1. Find the current student in the interview for this slot (if any)
-            $currentInterview = InterviewQueue::where('slot_id', $slotId)
+            // Check if there is already an interview in progress for this slot
+            $ongoingInterview = InterviewQueue::where('slot_id', $slotId)
                 ->where('status', 'in_interview')
-                ->first();
+                ->exists();
 
-            // 2. If a student is already in an interview, mark them as completed.
-            if ($currentInterview) {
-                $currentInterview->update([
-                    'status' => 'completed',
-                    'order_key' => 0, // Reset their key to 0 as they are no longer in the active queue
-                    'notes' => 'Interview completed.',
-                    'interview_ended_at' => now(),
-                ]);
+            if ($ongoingInterview) {
+                return $this->sendError('An interview is already in progress for this slot. Please end the current interview before calling the next student.', [], 409); // 409 Conflict
             }
 
-            // 3. Find the next student in the queue for this slot.
+            // Find the next student in the queue (who is 'waiting' or 'pending' and needs to be resumed)
             $nextStudent = InterviewQueue::where('slot_id', $slotId)
                 ->where('status', 'waiting')
                 ->orderBy('order_key', 'asc')
                 ->first();
 
-            // If there is no one left in the queue, commit and return.
             if (!$nextStudent) {
                 DB::commit();
                 return $this->sendResponse([], 'No students left in the queue.');
             }
 
-            // 4. Update the next student's status to 'in_interview'.
+            // Update the next student's status to 'in_interview'.
+            // The order_key is preserved temporarily while they are in interview.
             $nextStudent->update([
                 'status' => 'in_interview',
-                'order_key' => 0, // Reset their key to 0 as they are now in interview
                 'interview_started_at' => now(),
             ]);
 
-            // 5. No need to decrement anything. The ordering is now handled by the order_key.
-
-
             DB::commit();
 
-            // After the transaction, you would broadcast the queue update event here.
-            // For example: broadcast(new QueueUpdated($slotId))->toOthers();
+            // broadcast(new QueueUpdated($slotId))->toOthers();
 
             return $this->sendResponse(
-                [
-                    'now_interviewing' => $nextStudent,
-                ],
-                'Next student called successfully. The queue has been updated.'
+                ['now_interviewing' => $nextStudent],
+                'Next student called successfully.'
             );
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->sendError('An error occurred while advancing the queue.', [$e->getMessage()], 500);
+        }
+    }
+
+    public function endInterview(Request $request, $jobFairId, $queueId)
+    {
+        DB::beginTransaction();
+        try {
+            $interviewToEnd = InterviewQueue::where('id', $queueId)
+                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
+                    $q->where('event_id', $jobFairId);
+                })
+                ->where('status', 'in_interview')
+                ->firstOrFail();
+
+            $interviewToEnd->update([
+                'status' => 'completed',
+                'order_key' => 0, // Set order_key to 0 for completed interviews
+                'interview_ended_at' => now(),
+                'notes' => $request->input('notes', $interviewToEnd->notes), // Optionally update notes
+            ]);
+
+            DB::commit();
+
+            // broadcast(new QueueUpdated($interviewToEnd->slot_id))->toOthers();
+
+            return $this->sendResponse(
+                ['completed_interview' => $interviewToEnd],
+                'Interview ended successfully.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Interview entry in "in_interview" status not found.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError('An error occurred while ending the interview.', [$e->getMessage()], 500);
         }
     }
 
@@ -455,28 +517,4 @@ class InterviewQueueController extends BaseApiController
         }
     }
 
-    private function updateStatus($jobFairId, $queueId, $status)
-    {
-        try {
-            $queue = InterviewQueue::where('id', $queueId)
-                ->whereHas('slot.participation', function ($q) use ($jobFairId) {
-                    $q->where('event_id', $jobFairId);
-                })
-                ->firstOrFail();
-
-            $queue->update(['status' => $status]);
-
-            return $this->sendResponse(
-                [
-                    'queue_id' => $queue->id,
-                    'status' => $queue->status,
-                ],
-                'Queue entry updated successfully.'
-            );
-        } catch (ModelNotFoundException $e) {
-            return $this->sendError('Queue entry not found.');
-        } catch (\Exception $e) {
-            return $this->sendError('An error occurred while updating the queue entry.', [$e->getMessage()], 500);
-        }
-    }
 }

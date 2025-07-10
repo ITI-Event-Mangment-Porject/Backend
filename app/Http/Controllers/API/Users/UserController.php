@@ -8,6 +8,8 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Models\Auth\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends BaseApiController
@@ -22,9 +24,9 @@ class UserController extends BaseApiController
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'LIKE', "%{$search}%")
-                  ->orWhere('last_name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%")
-                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$search}%"]);
             });
         }
 
@@ -60,7 +62,7 @@ class UserController extends BaseApiController
         // Sorting
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         // Validate sort parameters
         $allowedSortFields = ['id', 'first_name', 'last_name', 'email', 'created_at', 'updated_at', 'intake_year', 'graduation_year'];
         if (in_array($sortBy, $allowedSortFields)) {
@@ -98,12 +100,13 @@ class UserController extends BaseApiController
                 'per_page' => $perPage,
             ]
         ];
-        
+
         return $this->sendResponse($data, 'Users retrieved successfully');
     }
 
     // Show a specific user
-    public function show($id){
+    public function show($id)
+    {
         try {
             $user = User::with(['track'])->findOrFail($id);
             return $this->sendResponse(['user' => $user], 'User details retrieved successfully');
@@ -113,101 +116,287 @@ class UserController extends BaseApiController
     }
 
     // Create a new user
-    public function store(StoreUserRequest $request){
-        $user = User::create($request->validated());
-        return $this->sendResponse(['user' => $user], 'User created successfully', 201);
-    }
-
-    // Update an existing user
-    public function update(Request $request, $id){
+    public function store(Request $request)
+    {
         try {
-            $user = User::findOrFail($id);
+            // Create a StoreUserRequest instance for validation rules
+            $storeRequest = new StoreUserRequest();
             
-            // Create and configure the UpdateUserRequest instance
-            $updateRequest = new UpdateUserRequest();
-            $updateRequest->setUserModel($user);
-            
-            // Validate the request using rules from UpdateUserRequest
-            $rules = $updateRequest->rules();
-            $messages = $updateRequest->messages();
-            
-            // Debug rules
-            if ($request->has('debug')) {
-                return $this->sendResponse([
-                    'rules' => $rules,
-                    'messages' => $messages,
-                    'request_data' => $request->all()
-                ], 'Debug information');
-            }
-            
-            $validator = validator()->make($request->all(), $rules, $messages);
-            
+            // Validate directly with the validator
+            $validator = validator()->make($request->all(), $storeRequest->rules(), $storeRequest->messages());
+
             if ($validator->fails()) {
                 return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
             }
+
+            // Get validated data
+            $validatedData = $validator->validated();
             
-            // Get validated data - this is the likely issue
-            $validatedData = [];
-            
-            // Try alternative methods to get validated data
-            try {
-                // Method 1: Using validate method
-                $validatedData = $validator->validate();
-            } catch (\Exception $ve) {
-                try {
-                    // Method 2: Using validated method
-                    $validatedData = $validator->validated();
-                } catch (\Exception $ve2) {
-                    // Method 3: Manually extract valid data
-                    foreach ($rules as $field => $rule) {
-                        if ($request->has($field)) {
-                            $validatedData[$field] = $request->input($field);
-                        }
-                    }
-                }
+            // Handle file uploads
+            if ($request->hasFile('profile_image')) {
+                $path = $request->file('profile_image')->store('profile-images', 'public');
+                $validatedData['profile_image'] = '/storage/' . $path;
+            }
+
+            if ($request->hasFile('cv_path')) {
+                $cvPath = $request->file('cv_path')->store('cvs', 'public');
+                $validatedData['cv_path'] = '/storage/' . $cvPath;
             }
             
-            // Debugging - log validated data
-            // \Log::info('Validated data for user update:', $validatedData);
+            // Create user with all validated data including file paths
+            $user = User::create($validatedData);
             
-            // Check if there's actually any data to update
-            if (empty($validatedData)) {
-                return $this->sendError('No data to update', ['error' => 'No valid data was provided for update'], 400);
-            }
-            
-            // Update the user with validated data
-            $user->fill($validatedData);
-            $changes = $user->getDirty();
-            
-            if (empty($changes)) {
-                return $this->sendResponse([
-                    'user' => $user,
-                    'message' => 'No changes detected in user data',
-                    'validated_data' => $validatedData
-                ], 'No changes to update');
-            }
-            
-            $user->save();
-            
-            // Refresh the user model to get the updated data
-            $user->refresh();
-            
-            return $this->sendResponse(['user' => $user], 'User updated successfully');
+            return $this->sendResponse(['user' => $user], 'User created successfully', 201);
         } catch (\Exception $e) {
-            // Log the exception for debugging
-            // \Log::error('Error updating user: ' . $e->getMessage(), ['exception' => $e]);
-            return $this->sendError('User update failed', ['error' => $e->getMessage()], 404);
+            Log::error('Error creating user: ' . $e->getMessage(), ['exception' => $e]);
+            return $this->sendError('User creation failed', ['error' => $e->getMessage()], 500);
         }
     }
+public function update(Request $request, $id)
+{
+    try {
+        $user = User::findOrFail($id);
 
+        // Debug: Log everything about the request
+        Log::info('=== UPDATE REQUEST DEBUG ===');
+        Log::info('Method: ' . $request->method());
+        Log::info('Content-Type: ' . $request->header('Content-Type'));
+        Log::info('Request All: ', $request->all());
+        Log::info('Request Input: ', $request->input());
+        Log::info('Request Files: ', $request->file());
+        Log::info('Has profile_image: ' . ($request->hasFile('profile_image') ? 'true' : 'false'));
+        Log::info('Has cv_path: ' . ($request->hasFile('cv_path') ? 'true' : 'false'));
+        Log::info('$_POST: ', $_POST);
+        Log::info('$_FILES: ', $_FILES);
+        Log::info('=== END DEBUG ===');
+
+        // For PATCH requests with multipart/form-data, we need to get all input data
+        // including both regular fields and file fields
+        $allInputData = array_merge($request->all(), $request->file());
+        
+        // Create and configure the UpdateUserRequest instance
+        $updateRequest = new UpdateUserRequest();
+        $updateRequest->setUserModel($user);
+
+        // Validate using the merged data
+        $validator = validator()->make($allInputData, $updateRequest->rules(), $updateRequest->messages());
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error', $validator->errors()->toArray(), 422);
+        }
+
+        // Start with empty validated data
+        $validatedData = [];
+        
+        // Handle text fields - check both input() and has() methods
+        $textFields = ['first_name', 'last_name', 'email', 'phone', 'bio', 'linkedin_url', 'github_url', 'portfolio_url', 'track_id', 'intake_year', 'graduation_year', 'is_active'];
+        
+        foreach ($textFields as $field) {
+            // Check if field exists in request (handles both POST and PATCH)
+            if ($request->has($field) || $request->filled($field)) {
+                $value = $request->input($field);
+                // Only add non-null values
+                if ($value !== null) {
+                    $validatedData[$field] = $value;
+                }
+            }
+        }
+        
+        Log::info('Text fields added: ', $validatedData);
+        
+        // Handle file uploads - more robust file checking
+        if ($request->hasFile('profile_image')) {
+            $file = $request->file('profile_image');
+            if ($file && $file->isValid()) {
+                Log::info('Processing profile_image upload');
+                // Delete old profile image if exists
+                if ($user->profile_image) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $user->profile_image));
+                }
+                $path = $file->store('profile-images', 'public');
+                $validatedData['profile_image'] = '/storage/' . $path;
+                Log::info('Profile image uploaded to: ' . $validatedData['profile_image']);
+            }
+        }
+
+        if ($request->hasFile('cv_path')) {
+            $file = $request->file('cv_path');
+            if ($file && $file->isValid()) {
+                Log::info('Processing cv_path upload');
+                // Delete old CV if exists
+                if ($user->cv_path) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $user->cv_path));
+                }
+                $cvPath = $file->store('cvs', 'public');
+                $validatedData['cv_path'] = '/storage/' . $cvPath;
+                Log::info('CV uploaded to: ' . $validatedData['cv_path']);
+            }
+        }
+        
+        Log::info('Final validated data: ', $validatedData);
+
+        // Check if there's actually any data to update
+        if (empty($validatedData)) {
+            Log::warning('No validated data found');
+            Log::info('Available request data: ', [
+                'all' => $request->all(),
+                'input' => $request->input(),
+                'files' => $request->file(),
+                'post' => $_POST,
+                'get' => $_GET
+            ]);
+            return $this->sendError('No data to update', ['error' => 'No valid data was provided for update'], 400);
+        }
+
+        // Update the user with validated data
+        $user->update($validatedData);
+
+        // Refresh the user model to get the updated data
+        $user->refresh();
+
+        return $this->sendResponse(['user' => $user], 'User updated successfully');
+    } catch (\Exception $e) {
+        // Log the exception for debugging
+        Log::error('Error updating user: ' . $e->getMessage(), ['exception' => $e]);
+        return $this->sendError('User update failed', ['error' => $e->getMessage()], 500);
+    }
+}
     // Delete a user
-    public function destroy($id){
+    public function destroy($id)
+    {
         try {
             $user = User::findOrFail($id);
+            
+            // Delete associated files when deleting user
+            if ($user->profile_image) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $user->profile_image));
+            }
+            if ($user->cv_path) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $user->cv_path));
+            }
+            
             $user->delete();
             return $this->sendResponse([], 'User deleted successfully');
         } catch (\Exception $e) {
             return $this->sendError('User deletion failed', ['error' => 'User with ID ' . $id . ' not found'], 404);
+        }
+    }
+
+    /**
+     * Upload profile image for a user
+     * POST /users/{id}/profile-image
+     */
+    public function uploadProfileImage(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'profile_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048'
+            ]);
+
+            $user = User::findOrFail($id);
+
+            if ($request->hasFile('profile_image')) {
+                // Delete old profile image if exists
+                if ($user->profile_image) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $user->profile_image));
+                }
+
+                // Store the new profile image
+                $path = $request->file('profile_image')->store('profile-images', 'public');
+
+                // Update the user with the new profile image path
+                $user->profile_image = '/storage/' . $path;
+                $user->save();
+
+                return $this->sendResponse([
+                    'profile_image' => $user->profile_image
+                ], 'Profile image uploaded successfully');
+            }
+
+            return $this->sendError('No profile image provided', [], 400);
+        } catch (\Exception $e) {
+            Log::error('Error uploading profile image: ' . $e->getMessage(), ['exception' => $e]);
+            return $this->sendError('Failed to upload profile image: ' . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * Upload CV for a user
+     * POST /users/{id}/cv
+     */
+    public function uploadCV(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'cv_path' => 'required|file|mimes:pdf,doc,docx|max:5120'
+            ]);
+
+            $user = User::findOrFail($id);
+
+            if ($request->hasFile('cv_path')) {
+                // Delete old CV if exists
+                if ($user->cv_path) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $user->cv_path));
+                }
+
+                // Store the new CV
+                $path = $request->file('cv_path')->store('cvs', 'public');
+
+                // Update the user with the new CV path
+                $user->cv_path = '/storage/' . $path;
+                $user->save();
+
+                return $this->sendResponse([
+                    'cv_path' => $user->cv_path
+                ], 'CV uploaded successfully');
+            }
+
+            return $this->sendError('No CV file provided', [], 400);
+        } catch (\Exception $e) {
+            Log::error('Error uploading CV: ' . $e->getMessage(), ['exception' => $e]);
+            return $this->sendError('Failed to upload CV: ' . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * Get profile image for a user
+     * GET /users/{id}/profile-image
+     */
+    public function getProfileImage($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            
+            if (!$user->profile_image) {
+                return $this->sendError('No profile image found', [], 404);
+            }
+
+            return $this->sendResponse([
+                'profile_image' => $user->profile_image
+            ], 'Profile image retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->sendError('User not found', ['error' => 'User with ID ' . $id . ' not found'], 404);
+        }
+    }
+
+    /**
+     * Get CV for a user
+     * GET /users/{id}/cv
+     */
+    public function getCV($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            
+            if (!$user->cv_path) {
+                return $this->sendError('No CV found', [], 404);
+            }
+
+            return $this->sendResponse([
+                'cv_path' => $user->cv_path
+            ], 'CV retrieved successfully');
+        } catch (\Exception $e) {
+            return $this->sendError('User not found', ['error' => 'User with ID ' . $id . ' not found'], 404);
         }
     }
 }

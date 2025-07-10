@@ -14,6 +14,7 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 use App\Http\Controllers\API\BaseApiController;
 use App\Http\Requests\LoginRequest;
 use App\Models\Auth\Track;
+use App\Models\JobFair\JobFairParticipation; // Import JobFairParticipation model
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\ConnectException;
@@ -119,23 +120,6 @@ class AuthController extends BaseApiController
                 ], 'User created. Profile completion required.');
             }
             
-            // Update existing user with latest data from portal
-            $user->update([
-                'email' => $userData['email'],
-                'cv_path' => $userData['cv_path'] ?? $user->cv_path,
-                'first_name' => $userData['first_name'] ?? $user->first_name,
-                'last_name' => $userData['last_name'] ?? $user->last_name,
-                'phone' => $userData['phone'] ?? $user->phone,
-                'track_id' => $userData['track_id'] ?? $user->track_id,
-                'intake_year' => $userData['intake_year'] ?? $user->intake_year,
-                'graduation_year' => $userData['graduation_year'] ?? $user->graduation_year,
-                'bio' => $userData['bio'] ?? $user->bio,
-                'linkedin_url' => $userData['linkedin_url'] ?? $user->linkedin_url,
-                'github_url' => $userData['github_url'] ?? $user->github_url,
-                'portfolio_url' => $userData['portfolio_url'] ?? $user->portfolio_url,
-                'profile_image' => $userData['profile_image'] ?? $user->profile_image,
-            ]);
-            $user->syncRoles($role);
             
             // Generate local tokens
             $accessToken = JWTAuth::fromUser($user);
@@ -145,16 +129,34 @@ class AuthController extends BaseApiController
             ])->fromUser($user);
             
             // Check profile completion
+            // Check profile completion
             $profileComplete = $this->checkProfileComplete($user);
-            
-            return $this->sendResponse([
+
+            $responseData = [
                 'user' => $user,
                 'role' => $user->getRoleNames()->first(),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                // 'portal_token' => $portalToken,
                 'profile_complete' => $profileComplete,
-            ], 'Login successful');
+            ];
+
+            // If the user is a company_representative, fetch the most recent job fair participation details
+            if ($user->hasRole('company_representative')) {
+                $mostRecentParticipation = JobFairParticipation::where('submitted_by', $user->id)
+                    ->latest() // Order by latest created_at
+                    ->select('id', 'company_id') // Select only necessary fields
+                    ->first(); // Get only the first (most recent) record
+
+                if ($mostRecentParticipation) {
+                    $responseData['job_fair_participation_id'] = $mostRecentParticipation->id;
+                    $responseData['company_id'] = $mostRecentParticipation->company_id;
+                } else {
+                    $responseData['job_fair_participation_id'] = null;
+                    $responseData['company_id'] = null;
+                }
+            }
+            
+            return $this->sendResponse($responseData, 'Login successful');
             
         }
          catch (ConnectException $e) {
