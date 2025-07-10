@@ -41,7 +41,7 @@ class CompanyController extends BaseApiController
                     'interviewQueues as filled_interviews_count',
                 ])
                 ->allowedFilters([
-                    AllowedFilter::exact('is_approved'),
+                    AllowedFilter::exact('status'),
                     AllowedFilter::exact('industry'),
                     AllowedFilter::exact('size'),
                     AllowedFilter::partial('name'),

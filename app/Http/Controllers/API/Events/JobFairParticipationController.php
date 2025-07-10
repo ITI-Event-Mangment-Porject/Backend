@@ -115,7 +115,7 @@ class JobFairParticipationController extends BaseApiController
                     'approved_at' => null, // Clear approved_at
                 ]);
             }
-
+          
             return $this->sendResponse(
                 $participation->fresh(),
                 "Participation {$validated['status']} successfully."
