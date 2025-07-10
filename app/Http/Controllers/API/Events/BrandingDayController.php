@@ -37,6 +37,7 @@ class BrandingDayController extends BaseApiController
         $result = $candidates->map(function ($candidate) {
             return [
                 'id' => $candidate->id,
+                'job_fair_participation_id' => $candidate->id,
                 'company_id' => $candidate->company_id,
                 'company_name' => $candidate->company->name ?? null,
                 'need_branding' => $candidate->need_branding,
