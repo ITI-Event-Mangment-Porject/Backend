@@ -41,11 +41,11 @@ class JobFairController extends BaseApiController
         return $this->sendResponse($jobFairs, 'Job fairs retrieved successfully.');
     }
 
-    public function show($jobfairid)
+    public function show($jobFairId)
     {
         $user = auth()->user();
         $event = Event::with('visibilityTracks.track:id,name')
-            ->where('id', $jobfairid)
+            ->where('id', $jobFairId)
             ->where('type', 'Job Fair')
             ->first();
 
