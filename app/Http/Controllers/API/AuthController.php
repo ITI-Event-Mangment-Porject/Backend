@@ -148,11 +148,11 @@ class AuthController extends BaseApiController
                     ->first(); // Get only the first (most recent) record
 
                 if ($mostRecentParticipation) {
-                    $responseData['job_fair_participation_id'] = $mostRecentParticipation->id;
-                    $responseData['company_id'] = $mostRecentParticipation->company_id;
+                    $responseData['user']['job_fair_participation_id'] = $mostRecentParticipation->id;
+                    $responseData['user']['company_id'] = $mostRecentParticipation->company_id;
                 } else {
-                    $responseData['job_fair_participation_id'] = null;
-                    $responseData['company_id'] = null;
+                    $responseData['user']['job_fair_participation_id'] = null;
+                    $responseData['user']['company_id'] = null;
                 }
             }
             
