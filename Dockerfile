@@ -37,14 +37,11 @@ RUN a2enmod rewrite headers
 # Copy Apache configuration
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# Copy composer files first for better caching
-COPY composer.json composer.lock ./
-
-# Install composer dependencies with fallback for grpc
-RUN composer install --optimize-autoloader --no-dev --ignore-platform-req=ext-grpc
-
-# Copy application files
+# Copy application files first (needed for artisan commands)
 COPY --chown=www-data:www-data . /var/www/html
+
+# Install composer dependencies with fallback for grpc and no scripts
+RUN composer install --optimize-autoloader --no-dev --ignore-platform-req=ext-grpc --no-scripts
 
 # Create necessary directories
 RUN mkdir -p /var/www/html/storage/app/public \
@@ -59,6 +56,9 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
+
+# Run composer scripts now that everything is in place
+RUN composer run-script post-autoload-dump --no-interaction || true
 
 # Copy startup script
 COPY docker/start.sh /usr/local/bin/start.sh
