@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use App\Services\FirestoreService; // Import the service
 
 class SendBulkMessages implements ShouldQueue
 {
@@ -18,12 +19,24 @@ class SendBulkMessages implements ShouldQueue
 
     protected $message;
 
+    /**
+     * Create a new job instance.
+     *
+     * @param  \App\Models\NotificationsAndMessaging\BulkMessage  $message
+     * @return void
+     */
     public function __construct(BulkMessage $message)
     {
         $this->message = $message;
     }
 
-    public function handle()
+    /**
+     * Execute the job.
+     *
+     * @param  \App\Services\FirestoreService $firebase
+     * @return void
+     */
+    public function handle(FirestoreService $firebase)
     {
         $criteria = $this->message->target_criteria;
 
@@ -53,6 +66,21 @@ class SendBulkMessages implements ShouldQueue
             'status' => 'completed',
             'sent_at' => now(),
         ]);
+
+        // Send Firebase notification after all individual notifications are processed
+        try {
+            $firebase->sendToAllUsers([
+                'title' => 'Bulk Message Sent: ' . $this->message->title,
+                'body' => $this->message->message, // Use the actual message content
+                'type' => 'bulk_message',
+                'id' => $this->message->id, // Pass message ID for potential deep linking
+            ]);
+            Log::info('Firebase notification sent for bulk message: ' . $this->message->id);
+        } catch (\Exception $e) {
+            Log::error('Failed to send Firebase notification for bulk message: ' . $this->message->id, [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function sendToUser(User $user)
