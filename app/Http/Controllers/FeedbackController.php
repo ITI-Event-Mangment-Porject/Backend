@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\API\BaseApiController;
 use App\Models\FeedbackAndAnalytics\FeedbackForm;
 use App\Models\FeedbackAndAnalytics\FeedbackResponse;
 use App\Models\Event\Event;
@@ -9,28 +10,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse;
 
-class FeedbackController extends Controller
+class FeedbackController extends BaseApiController
 {
     public function getEventFeedbackForms($eventId): JsonResponse
     {
         $event = Event::find($eventId);
         if (!$event) {
-            return response()->json(['error' => 'Event not found'], 404);
+            return $this->sendError('Event not found.', [], 404);
         }
 
-        $forms = FeedbackForm::where('event_id', $eventId)
+        $form = FeedbackForm::where('event_id', $eventId)
             ->where('is_active', true)
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->first();
 
-        return response()->json($forms);
+        if (!$form) {
+            return $this->sendError('No active feedback form found for this event.', [], 404);
+        }
+
+        return $this->sendResponse($form, 'Event feedback form retrieved successfully.');
     }
 
     public function createFeedbackForm(Request $request, $eventId): JsonResponse
     {
         $event = Event::find($eventId);
         if (!$event) {
-            return response()->json(['error' => 'Event not found'], 404);
+            return $this->sendError('Event not found.', [], 404);
+        }
+
+        $existingForm = FeedbackForm::where('event_id', $eventId)
+            ->where('is_active', true)
+            ->first();
+
+        if ($existingForm) {
+            return $this->sendError('An active feedback form already exists for this event.', [], 409);
         }
 
         $validator = Validator::make($request->all(), [
@@ -40,7 +53,7 @@ class FeedbackController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
         }
 
         $form = FeedbackForm::create([
@@ -51,14 +64,14 @@ class FeedbackController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return response()->json($form, 201);
+        return $this->sendResponse($form, 'Feedback form created successfully.', 201);
     }
 
     public function submitFeedbackResponse(Request $request, $formId): JsonResponse
     {
         $form = FeedbackForm::find($formId);
         if (!$form || !$form->is_active) {
-            return response()->json(['error' => 'Form not found or inactive'], 404);
+            return $this->sendError('Form not found or inactive.', [], 404);
         }
 
         $validator = Validator::make($request->all(), [
@@ -67,7 +80,15 @@ class FeedbackController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
+        }
+
+        $existingResponse = FeedbackResponse::where('form_id', $formId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($existingResponse) {
+            return $this->sendError('You have already submitted a response for this form.', [], 409);
         }
 
         $response = FeedbackResponse::create([
@@ -78,38 +99,52 @@ class FeedbackController extends Controller
             'overall_rating' => $request->overall_rating,
         ]);
 
-        return response()->json($response, 201);
+        return $this->sendResponse($response, 'Feedback response submitted successfully.', 201);
     }
 
-    public function getFeedbackResponses($formId): JsonResponse
+    public function getFeedbackResponses($eventId): JsonResponse
     {
-        $form = FeedbackForm::find($formId);
-        if (!$form) {
-            return response()->json(['error' => 'Form not found'], 404);
+        $event = Event::find($eventId);
+        if (!$event) {
+            return $this->sendError('Event not found.', [], 404);
         }
 
-        $responses = FeedbackResponse::where('form_id', $formId)
-            ->with('user:id,name,email')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $form = FeedbackForm::where('event_id', $eventId)
+            ->first();
 
-        return response()->json([
+        if (!$form) {
+            return $this->sendError('No active feedback form found for this event.', [], 404);
+        }
+
+        $responses = FeedbackResponse::where('form_id', $form->id)
+            ->with('user:id,first_name,last_name,email')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($response) {
+                // Ensure it's always JSON string
+                $response->responses = is_array($response->responses)
+                    ? json_encode($response->responses)
+                    : $response->responses;
+                return $response;
+            });
+
+        return $this->sendResponse([
             'form' => $form,
             'responses' => $responses,
             'total_responses' => $responses->count(),
             'average_rating' => $responses->whereNotNull('overall_rating')->avg('overall_rating')
-        ]);
+        ], 'Feedback responses retrieved successfully for event.');
     }
 
     public function toggleFeedbackForm($formId): JsonResponse
     {
         $form = FeedbackForm::find($formId);
         if (!$form) {
-            return response()->json(['error' => 'Form not found'], 404);
+            return $this->sendError('Form not found.', [], 404);
         }
 
         $form->update(['is_active' => !$form->is_active]);
 
-        return response()->json($form);
+        return $this->sendResponse($form, 'Feedback form status toggled successfully.');
     }
 }
