@@ -26,9 +26,8 @@ class CompanyController extends BaseApiController
 
             if ($request->hasFile('logo_path')) {
                 $path = $request->file('logo_path')->store('companies', 'public');
-                $data['logo_path'] = Storage::url($path);
+                $data['logo_path'] = $path;
             }
-
             $company = Company::create($data);
             return $this->sendResponse($company, 'Company created successfully', 201);
         } catch (Exception $e) {
@@ -90,7 +89,7 @@ class CompanyController extends BaseApiController
 
         } catch (Exception $e) {
             return $this->sendError('Failed to retrieve company', ['error' => $e->getMessage()]);
-        }   
+        }
     }
     //update company
     public function update(StoreCompanyRequest $request, $id)
