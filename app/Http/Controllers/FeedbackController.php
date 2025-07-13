@@ -119,20 +119,24 @@ class FeedbackController extends BaseApiController
         $responses = FeedbackResponse::where('form_id', $form->id)
             ->with('user:id,first_name,last_name,email')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($response) {
-                // Ensure it's always JSON string
-                $response->responses = is_array($response->responses)
-                    ? json_encode($response->responses)
-                    : $response->responses;
-                return $response;
-            });
+            ->paginate(6);
+
+        $responses->getCollection()->transform(function ($response) {
+            $response->responses = is_array($response->responses)
+                ? json_encode($response->responses)
+                : $response->responses;
+            return $response;
+        });
+
+        $averageRating = FeedbackResponse::where('form_id', $form->id)
+            ->whereNotNull('overall_rating')
+            ->avg('overall_rating');
 
         return $this->sendResponse([
             'form' => $form,
             'responses' => $responses,
-            'total_responses' => $responses->count(),
-            'average_rating' => $responses->whereNotNull('overall_rating')->avg('overall_rating')
+            'total_responses' => $responses->total(),
+            'average_rating' => $averageRating
         ], 'Feedback responses retrieved successfully for event.');
     }
 
