@@ -47,7 +47,7 @@ class BrandingDayController extends BaseApiController
                     'speaker_name' => $candidate->brandingDaySpeakers->first()->speaker_name,
                     'position' => $candidate->brandingDaySpeakers->first()->position,
                     'mobile' => $candidate->brandingDaySpeakers->first()->mobile,
-                    'photo' => $candidate->brandingDaySpeakers->first()->photo,
+                    'photo' => $candidate->brandingDaySpeakers->first()->photo ? asset($candidate->brandingDaySpeakers->first()->photo) : null,
                 ] : null,
             ];
         });
@@ -81,7 +81,7 @@ class BrandingDayController extends BaseApiController
                         'speaker_name' => $slot->speaker->speaker_name,
                         'position' => $slot->speaker->position,
                         'mobile' => $slot->speaker->mobile,
-                        'photo' => $slot->speaker->photo,
+                        'photo' => $slot->speaker->photo ? asset($slot->speaker->photo) : null,
                     ] : null,
                 ];
             });
@@ -184,7 +184,7 @@ class BrandingDayController extends BaseApiController
         $data = $request->validated();
         // Handle photo upload if present
         if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('public/speakers'); // Store in storage/app/public/speakers
+            $path = $request->file('photo')->store('speakers','public'); // Store in storage/app/public/speakers
             $data['photo'] = Storage::url($path); // Get public URL
         }
 
@@ -216,6 +216,11 @@ class BrandingDayController extends BaseApiController
             return $this->sendError('No speaker found for this participation.', [], 404);
         }
 
+        // Prepend base URL to photo if it exists
+        if ($speaker->photo) {
+            $speaker->photo = asset($speaker->photo);
+        }
+
         return $this->sendResponse($speaker, 'Speaker retrieved successfully.');
     }
 
@@ -231,6 +236,13 @@ class BrandingDayController extends BaseApiController
         if ($speakers->isEmpty()) {
             return $this->sendError('No speakers found for this job fair.', [], 404);
         }
+
+        $speakers->map(function ($speaker) {
+            if ($speaker->photo) {
+                $speaker->photo = asset($speaker->photo);
+            }
+            return $speaker;
+        });
 
         return $this->sendResponse($speakers, 'Speakers retrieved successfully.');
     }
