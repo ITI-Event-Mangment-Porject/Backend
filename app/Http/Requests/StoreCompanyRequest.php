@@ -33,7 +33,8 @@ class StoreCompanyRequest extends FormRequest
                 'required',
                 'regex:/^(\+20|0020|20)?(01[0-9]{9}|0[2-9][0-9]{7,8})$/'
             ],
-            'linkedin_url' => 'nullable|url'
+            'linkedin_url' => 'nullable|url',
+            'logo_path' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'],
         ];
 
         // Handle email validation differently for create vs update

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Company\Company;
 use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class CompanyFactory extends Factory
 {
@@ -19,9 +20,22 @@ class CompanyFactory extends Factory
 
         $sizes = ['startup', 'small', 'medium', 'large', 'enterprise'];
 
+        // ✅ Always create a real image file
+        $companyName = $this->faker->company();
+        $filename = 'logo_' . Str::slug($companyName) . '.png';
+        $path = storage_path("app/public/companies/{$filename}");
+
+        $img = imagecreatetruecolor(200, 200);
+        $bgColor = imagecolorallocate($img, 220, 220, 220);
+        imagefill($img, 0, 0, $bgColor);
+        $textColor = imagecolorallocate($img, 0, 0, 0);
+        imagestring($img, 5, 30, 90, 'Logo', $textColor);
+        imagepng($img, $path);
+        imagedestroy($img);
+
         return [
-            'name' => $this->faker->company(),
-            'logo_path' => $this->faker->optional()->imageUrl(200, 200, 'business'),
+            'name' => $companyName,
+            'logo_path' => "companies/{$filename}",
             'description' => $this->faker->paragraphs(2, true),
             'website' => $this->faker->url(),
             'industry' => $this->faker->randomElement($industries),
