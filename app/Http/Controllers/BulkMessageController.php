@@ -87,15 +87,6 @@ class BulkMessageController extends Controller
 
         $message->update(['status' => 'sending']);
       
-      
-//         $this->firebase->sendToAllUsers([
-//         'title' => 'Testing Message',
-//         'body' => 'An important message has been sent to you by the administration',
-//         'type' => 'bulk_message',
-// ]);
-
-
-
         return response()->json([
             'message' => 'Bulk message is being sent',
             'status' => $message->status
