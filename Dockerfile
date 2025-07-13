@@ -4,6 +4,10 @@ FROM php:8.2-apache
 # Set working directory
 WORKDIR /var/www/html
 
+# Set environment variables for Composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_NO_INTERACTION=1
+
 # Install system dependencies and clean up in single layer
 RUN apt-get update && apt-get install -y \
     git \
@@ -33,10 +37,16 @@ RUN a2enmod rewrite headers
 # Copy Apache configuration
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# Copy existing application directory contents
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
+
+# Install composer dependencies with fallback for grpc
+RUN composer install --optimize-autoloader --no-dev --ignore-platform-req=ext-grpc
+
+# Copy application files
 COPY --chown=www-data:www-data . /var/www/html
 
-# Create necessary directories if they don't exist
+# Create necessary directories
 RUN mkdir -p /var/www/html/storage/app/public \
     && mkdir -p /var/www/html/storage/framework/cache \
     && mkdir -p /var/www/html/storage/framework/sessions \
@@ -49,9 +59,6 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
-
-# Install PHP dependencies
-RUN composer install --optimize-autoloader --no-dev
 
 # Copy startup script
 COPY docker/start.sh /usr/local/bin/start.sh
