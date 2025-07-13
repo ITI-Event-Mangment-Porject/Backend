@@ -264,13 +264,13 @@ Route::prefix('feedback')->middleware(['auth:api'])->group(function () {
     // Get feedback forms for an event (all users)
     Route::get('/events/{eventId}/forms', [FeedbackController::class, 'getEventFeedbackForms']);
     // Create feedback form (admin only)
-    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
+    Route::post('/events/{eventId}/forms', [FeedbackController::class, 'createFeedbackForm'])->middleware('role:admin');
     // Submit feedback response (students)
     Route::post('/forms/{formId}/responses', [FeedbackController::class, 'submitFeedbackResponse']);
     // Get feedback responses (admin only)
-    Route::get('/forms/{formId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware(RoleMiddleware::class.':admin');;
+    Route::get('/events/{eventId}/responses', [FeedbackController::class, 'getFeedbackResponses'])->middleware('role:admin');
     // Toggle form status (admin only)
-    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware(RoleMiddleware::class.':admin');;
+    Route::patch('/forms/{formId}/toggle', [FeedbackController::class, 'toggleFeedbackForm'])->middleware('role:admin');
     // AI-powered feedback analysis
     Route::post('/events/{eventId}/analyze', [AIInsightsController::class, 'generateInsights'])
         ->middleware('check.any.role:admin');
