@@ -23,6 +23,12 @@ class CompanyController extends BaseApiController
             $data = $request->validated();
             $data['is_approved'] = false;
             $data['status'] = 'pending';
+
+            if ($request->hasFile('logo_path')) {
+                $path = $request->file('logo_path')->store('companies', 'public');
+                $data['logo_path'] = Storage::url($path);
+            }
+
             $company = Company::create($data);
             return $this->sendResponse($company, 'Company created successfully', 201);
         } catch (Exception $e) {
@@ -51,6 +57,9 @@ class CompanyController extends BaseApiController
             $companies = $query->paginate($request->get('per_page', 15));
             $companies->getCollection()->transform(function ($company) {
                 $company->available_interviews = $company->interview_requests_count - $company->filled_interviews_count;
+                if ($company->logo_path) {
+                    $company->logo_path = asset('storage/' . ltrim($company->logo_path, '/'));
+                }
                 return $company;
             });
 
@@ -72,13 +81,16 @@ class CompanyController extends BaseApiController
     {
         try {
             $company = Company::findOrFail($id);
+            if ($company->logo_path) {
+                $company->logo_path = asset('storage/' . ltrim($company->logo_path, '/'));
+            }
             return $this->sendResponse($company, 'company retrieved successfully', 200);
         } catch (ModelNotFoundException $e) {
             return $this->sendError('company not found', ['error' => $e->getMessage()], 404);
 
         } catch (Exception $e) {
             return $this->sendError('Failed to retrieve company', ['error' => $e->getMessage()]);
-        }
+        }   
     }
     //update company
     public function update(StoreCompanyRequest $request, $id)
@@ -86,6 +98,16 @@ class CompanyController extends BaseApiController
         try {
             $company = Company::findOrFail($id);
             $data = $request->except(['email']);
+
+            if ($request->hasFile('logo_path')) {
+                // Delete old logo if it exists
+                if ($company->logo_path && Storage::disk('public')->exists(str_replace('/storage/', '', $company->logo_path))) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $company->logo_path));
+                }
+
+                $path = $request->file('logo_path')->store('companies', 'public');
+                $data['logo_path'] = Storage::url($path);
+            }
 
             $company->update($data);
             return $this->sendResponse($company->fresh(), 'Company updated successfully', 200);
@@ -137,33 +159,6 @@ class CompanyController extends BaseApiController
             return $this->sendError('Company Not Found', ['error' => 'Company Model Not Found'], 404);
         } catch (Exception $e) {
             return $this->sendError('Reject Failed', ['error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function uploadLogo(Request $request, $id)
-    {
-        try {
-            $request->validate([
-                'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            ]);
-            $company = Company::findOrFail($id);
-            if (!$company) {
-                return response()->json(['message' => 'company is Not Found'], 404);
-            }
-            $user = Auth::user();
-            $path = $request->file('logo')->store('logos', 'public');
-
-            // delete old logo if exists
-            if ($company->logo_path && Storage::disk('public')->exists($company->logo_path)) {
-                Storage::disk('public')->delete($company->logo_path);
-            }
-            $company->logo_path = $path;
-            $company->save();
-            return $this->sendResponse($path, 'Logo uploaded successfully', 200);
-        } catch (ModelNotFoundException $e) {
-            return $this->sendError('Company Not Found', ['error' => 'Company Model Not Found'], 404);
-        } catch (Exception $e) {
-            return $this->sendError('Failed to upload logo', ['error' => $e->getMessage()], 500);
         }
     }
 

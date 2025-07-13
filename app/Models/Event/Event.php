@@ -51,9 +51,21 @@ class Event extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected $appends = ['has_feedback_form'];
+
     protected static function newFactory()
     {
         return \Database\Factories\EventFactory::new();
+    }
+    public function getHasFeedbackFormAttribute()
+    {
+        // If feedback_forms_count is already loaded, use it to avoid an extra query.
+        if (array_key_exists('feedback_forms_count', $this->attributes)) {
+            return $this->attributes['feedback_forms_count'] > 0;
+        }
+        // Otherwise, run an efficient query to check for existence.
+        return $this->feedbackForms()->exists();
     }
 
     public function creator()

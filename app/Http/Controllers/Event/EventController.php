@@ -63,11 +63,6 @@ class EventController extends BaseApiController
 
             $events = $eventsQuery->paginate($perPage, ['*'], 'page', $page);
 
-            $events->getCollection()->transform(function ($event) {
-                $event->has_feedback_form = $event->feedback_forms_count > 0;
-                return $event;
-            });
-
             if ($events->count() === 0) {
                 return $this->sendError('No events found', [], 404);
             }
