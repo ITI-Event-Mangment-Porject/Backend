@@ -1,10 +1,10 @@
-# Use the official PHP image with Apache
+# Use the official PHP image with Apache for Production
 FROM php:8.2-apache
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
+# Install system dependencies and clean up in single layer
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -21,10 +21,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd \
-    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath zip intl
-
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring exif pcntl bcmath zip intl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -36,10 +34,15 @@ RUN a2enmod rewrite headers
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
 # Copy existing application directory contents
-COPY . /var/www/html
-
-# Copy existing application directory permissions
 COPY --chown=www-data:www-data . /var/www/html
+
+# Create necessary directories if they don't exist
+RUN mkdir -p /var/www/html/storage/app/public \
+    && mkdir -p /var/www/html/storage/framework/cache \
+    && mkdir -p /var/www/html/storage/framework/sessions \
+    && mkdir -p /var/www/html/storage/framework/views \
+    && mkdir -p /var/www/html/storage/logs \
+    && mkdir -p /var/www/html/bootstrap/cache
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
@@ -50,19 +53,12 @@ RUN chown -R www-data:www-data /var/www/html \
 # Install PHP dependencies
 RUN composer install --optimize-autoloader --no-dev
 
-# Create storage link
-RUN php artisan storage:link || true
-
-# Generate application key if not exists
-RUN php artisan key:generate || true
-
-# Cache configuration
-RUN php artisan config:cache || true
-RUN php artisan route:cache || true
-RUN php artisan view:cache || true
+# Copy startup script
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
 
 # Expose port 80
 EXPOSE 80
 
-# Start Apache server
-CMD ["apache2-foreground"]
+# Use startup script
+CMD ["/usr/local/bin/start.sh"]

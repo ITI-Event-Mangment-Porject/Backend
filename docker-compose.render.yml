@@ -1,29 +1,27 @@
-# Docker Compose for Laravel Backend (Production with External Database)
+# Docker Compose for Render Production Deployment
 version: '3.8'
 
 services:
-  # Laravel Application
+  # Laravel Application (Single Container for Render)
   laravel-app:
     build: .
-    container_name: laravel-backend
+    container_name: laravel-backend-production
     ports:
-      - "8000:80"
+      - "10000:80"  # Render uses port 10000
     volumes:
       - ./storage:/var/www/html/storage
       - ./public/storage:/var/www/html/public/storage
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
+      - APP_URL=https://communiti-server.onrender.com
       - DB_CONNECTION=mysql
       - DB_HOST=sql7.freesqldatabase.com
       - DB_PORT=3306
       - DB_DATABASE=sql7789809
       - DB_USERNAME=sql7789809
       - DB_PASSWORD=GUufRJwtjU
-      - APP_URL=https://communiti-server.onrender.com
-    networks:
-      - laravel-network
-
-networks:
-  laravel-network:
-    driver: bridge
+      - CACHE_DRIVER=file
+      - SESSION_DRIVER=file
+      - QUEUE_CONNECTION=sync
+    restart: unless-stopped

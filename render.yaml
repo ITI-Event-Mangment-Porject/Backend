@@ -1,0 +1,56 @@
+# render.yaml - Render deployment configuration
+services:
+  - type: web
+    name: laravel-backend
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    envVars:
+      - key: APP_NAME
+        value: Laravel
+      - key: APP_ENV
+        value: production
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        value: https://communiti-server.onrender.com
+      - key: LOG_CHANNEL
+        value: stack
+      - key: LOG_LEVEL
+        value: error
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        value: sql7.freesqldatabase.com
+      - key: DB_PORT
+        value: 3306
+      - key: DB_DATABASE
+        value: sql7789809
+      - key: DB_USERNAME
+        value: sql7789809
+      - key: DB_PASSWORD
+        value: GUufRJwtjU
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: JWT_SECRET
+        generateValue: true
+    buildCommand: |
+      echo "Building Laravel application..."
+      composer install --no-dev --optimize-autoloader
+      php artisan config:cache
+      php artisan route:cache
+      php artisan view:cache
+    startCommand: |
+      echo "Starting Laravel application..."
+      cp .env.production .env
+      php artisan key:generate --force
+      php artisan migrate --force
+      php artisan storage:link
+      apache2-foreground
