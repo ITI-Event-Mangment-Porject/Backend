@@ -25,7 +25,7 @@ class StoreBrandingDaySpeakerRequest extends FormRequest
             'speaker_name' => ['required', 'string', 'max:255'],
             'position' => ['nullable', 'string', 'max:255'],
             'mobile' => ['nullable', 'string', 'max:20'],
-            'photo' => ['nullable', 'string'], // Assuming this will store a file path/URL
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,svg', 'max:2048'], // Validate as an image file
             // 'job_fair_participation_id' is obtained from the URL and implicitly handled by the controller
         ];
     }

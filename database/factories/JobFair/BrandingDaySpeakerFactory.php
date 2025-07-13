@@ -20,7 +20,7 @@ class BrandingDaySpeakerFactory extends Factory
             'speaker_name' => $this->faker->name(),
             'position' => $this->faker->jobTitle(),
             'mobile' => $this->faker->phoneNumber(),
-            'photo' => $this->faker->imageUrl(640, 480, 'people', true),
+            'photo' => 'speakers/placeholder.jpg', // Placeholder for a stored image file path
         ];
     }
 }
