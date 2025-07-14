@@ -16,6 +16,7 @@ class BrandingDaySchedule extends Model
         'start_time',
         'end_time',
         'order',
+        'branding_day_speaker_id',
     ];
 
     public function event()

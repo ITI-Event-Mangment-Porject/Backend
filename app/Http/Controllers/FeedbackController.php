@@ -119,7 +119,7 @@ class FeedbackController extends BaseApiController
         $responses = FeedbackResponse::where('form_id', $form->id)
             ->with('user:id,first_name,last_name,email')
             ->orderBy('created_at', 'desc')
-            ->paginate(6);
+            ->paginate(10);
 
         $responses->getCollection()->transform(function ($response) {
             $response->responses = is_array($response->responses)

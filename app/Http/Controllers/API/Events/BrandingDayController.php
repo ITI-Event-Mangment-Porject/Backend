@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\API\Events;
 
 use App\Http\Controllers\API\BaseApiController;
+use Auth;
+use Carbon\Carbon;
+use DB;
 use Illuminate\Http\Request;
 use App\Models\JobFair\JobFairParticipation;
 use App\Models\JobFair\BrandingDaySchedule;
@@ -47,7 +50,7 @@ class BrandingDayController extends BaseApiController
                     'speaker_name' => $candidate->brandingDaySpeakers->first()->speaker_name,
                     'position' => $candidate->brandingDaySpeakers->first()->position,
                     'mobile' => $candidate->brandingDaySpeakers->first()->mobile,
-                    'photo' => $candidate->brandingDaySpeakers->first()->photo ? asset($candidate->brandingDaySpeakers->first()->photo) : null,
+                    'photo' => $candidate->brandingDaySpeakers->first()->photo ? asset('storage/' . $candidate->brandingDaySpeakers->first()->photo) : null,
                 ] : null,
             ];
         });
@@ -81,7 +84,7 @@ class BrandingDayController extends BaseApiController
                         'speaker_name' => $slot->speaker->speaker_name,
                         'position' => $slot->speaker->position,
                         'mobile' => $slot->speaker->mobile,
-                        'photo' => $slot->speaker->photo ? asset($slot->speaker->photo) : null,
+                        'photo' => $slot->speaker->photo ? asset('storage/' . $slot->speaker->photo) : null,
                     ] : null,
                 ];
             });
@@ -99,23 +102,83 @@ class BrandingDayController extends BaseApiController
     {
         $data = $request->validated();
 
-        // Delete existing schedule entries for this job fair
-        BrandingDaySchedule::where('event_id', $jobFairId)->delete();
-
+        // Validate schedule for overlaps and conflicts
         foreach ($data['schedule'] as $slot) {
-            BrandingDaySchedule::create([
-                'event_id' => $jobFairId,
-                'company_id' => $slot['company_id'],
-                'participation_id' => $slot['participation_id'],
-                'branding_day_date' => $slot['branding_day_date'],
-                'start_time' => $slot['start_time'],
-                'end_time' => $slot['end_time'],
-                'order' => $slot['order'] ?? null,
-                'branding_day_speaker_id' => $slot['speaker_id'] ?? null, // Store speaker_id
-            ]);
+            $startTime = Carbon::parse($slot['branding_day_date'] . ' ' . $slot['start_time']);
+            $endTime = Carbon::parse($slot['branding_day_date'] . ' ' . $slot['end_time']);
+            
+            // Validate time logic
+            if ($endTime <= $startTime) {
+                return $this->sendError('Invalid time slot: End time must be after start time for company ID ' . $slot['company_id'], [], 422);
+            }
+            
+            // Check for overlaps with existing schedule
+            $existingOverlap = BrandingDaySchedule::where('event_id', $jobFairId)
+                ->where('branding_day_date', $slot['branding_day_date'])
+                ->where(function ($query) use ($slot) {
+                    $query->whereBetween('start_time', [$slot['start_time'], $slot['end_time']])
+                          ->orWhereBetween('end_time', [$slot['start_time'], $slot['end_time']])
+                          ->orWhere(function ($subQuery) use ($slot) {
+                              $subQuery->where('start_time', '<=', $slot['start_time'])
+                                       ->where('end_time', '>=', $slot['end_time']);
+                          });
+                })
+                ->exists();
+            
+            if ($existingOverlap) {
+                return $this->sendError('Schedule conflict: Time slot overlaps with existing schedule on ' . $slot['branding_day_date'], [], 422);
+            }
+            
+            // Check for speaker double-booking if speaker is assigned
+            if (!empty($slot['speaker_id'])) {
+                $speakerConflict = BrandingDaySchedule::where('event_id', $jobFairId)
+                    ->where('branding_day_date', $slot['branding_day_date'])
+                    ->where('branding_day_speaker_id', $slot['speaker_id'])
+                    ->where(function ($query) use ($slot) {
+                        $query->whereBetween('start_time', [$slot['start_time'], $slot['end_time']])
+                              ->orWhereBetween('end_time', [$slot['start_time'], $slot['end_time']])
+                              ->orWhere(function ($subQuery) use ($slot) {
+                                  $subQuery->where('start_time', '<=', $slot['start_time'])
+                                           ->where('end_time', '>=', $slot['end_time']);
+                              });
+                    })
+                    ->exists();
+                
+                if ($speakerConflict) {
+                    return $this->sendError('Speaker conflict: Speaker is already scheduled for another session on ' . $slot['branding_day_date'], [], 422);
+                }
+            }
         }
 
-        return $this->sendResponse([], 'Branding day schedule saved successfully.');
+        // Use database transaction to ensure data consistency
+        DB::beginTransaction();
+        
+        try {
+            BrandingDaySchedule::where('event_id', $jobFairId)
+            ->where('company_id', $slot['company_id']) // or participation_id
+            ->delete();
+
+            foreach ($data['schedule'] as $slot) {
+                BrandingDaySchedule::create([
+                    'event_id' => $jobFairId,
+                    'company_id' => $slot['company_id'],
+                    'participation_id' => $slot['participation_id'],
+                    'branding_day_date' => $slot['branding_day_date'],
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                    'order' => $slot['order'] ?? null,
+                    'branding_day_speaker_id' => $slot['speaker_id'] ?? null, // Store speaker_id
+                ]);
+            }
+            $this->reorderSlotsForDate($jobFairId, $slot['branding_day_date']);
+
+            DB::commit();
+            return $this->sendResponse([], 'Branding day schedule saved successfully.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError('Failed to save branding day schedule. Please try again.', [], 500);
+        }
     }
 
     /**
@@ -123,25 +186,93 @@ class BrandingDayController extends BaseApiController
      */
     public function update(UpdateBrandingDayScheduleRequest $request, $jobFairId, $scheduleId)
     {
-        try {
-            $slot = BrandingDaySchedule::where('event_id', $jobFairId)->findOrFail($scheduleId);
-        } catch (ModelNotFoundException $e) {
-            return $this->sendError('Schedule slot not found.', [], 404);
+        $slot = $request->validated();
+        $schedule = BrandingDaySchedule::findOrFail($scheduleId);
+
+        // Use fallback values for conflict checks
+        $brandingDayDate = $slot['branding_day_date'] ?? $schedule->branding_day_date;
+        $startTime = $slot['start_time'] ?? $schedule->start_time;
+        $endTime = $slot['end_time'] ?? $schedule->end_time;
+
+        // Convert to Carbon to check time logic
+        if ($startTime && $endTime && $brandingDayDate) {
+            $start = Carbon::parse("$brandingDayDate $startTime");
+            $end = Carbon::parse("$brandingDayDate $endTime");
+
+            if ($end <= $start) {
+                return $this->sendError('Invalid time slot: End time must be after start time.', [], 422);
+            }
+
+            // Check time overlap (excluding self)
+            $conflict = BrandingDaySchedule::where('event_id', $jobFairId)
+                ->where('id', '!=', $scheduleId)
+                ->where('branding_day_date', $brandingDayDate)
+                ->where(function ($query) use ($startTime, $endTime) {
+                    $query->whereBetween('start_time', [$startTime, $endTime])
+                        ->orWhereBetween('end_time', [$startTime, $endTime])
+                        ->orWhere(function ($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '<=', $startTime)
+                                ->where('end_time', '>=', $endTime);
+                        });
+                })
+                ->exists();
+
+            if ($conflict) {
+                return $this->sendError("Schedule conflict: Time slot overlaps with another session on $brandingDayDate", [], 422);
+            }
         }
 
-        $slot->update($request->validated());
+        // Check speaker conflict if provided
+        if (!empty($slot['branding_day_speaker_id'])) {
+            $speakerConflict = BrandingDaySchedule::where('event_id', $jobFairId)
+                ->where('id', '!=', $scheduleId)
+                ->where('branding_day_date', $brandingDayDate)
+                ->where('branding_day_speaker_id', $slot['branding_day_speaker_id'])
+                ->where(function ($query) use ($startTime, $endTime) {
+                    $query->whereBetween('start_time', [$startTime, $endTime])
+                        ->orWhereBetween('end_time', [$startTime, $endTime])
+                        ->orWhere(function ($q) use ($startTime, $endTime) {
+                            $q->where('start_time', '<=', $startTime)
+                                ->where('end_time', '>=', $endTime);
+                        });
+                })
+                ->exists();
 
-        return $this->sendResponse([
-            'id' => $slot->id,
-            'company_id' => $slot->company_id,
-            'participation_id' => $slot->participation_id,
-            'branding_day_date' => $slot->branding_day_date,
-            'start_time' => $slot->start_time,
-            'end_time' => $slot->end_time,
-            'order' => $slot->order,
-            'branding_day_speaker_id' => $slot->branding_day_speaker_id,
-        ], 'Schedule slot updated.');
+            if ($speakerConflict) {
+                return $this->sendError('Speaker conflict: This speaker is already scheduled during that time.', [], 422);
+            }
+        }
+
+        // Only update what's present
+        $updateData = [];
+        foreach (['branding_day_date', 'start_time', 'end_time', 'order', 'branding_day_speaker_id'] as $field) {
+            if ($request->has($field)) {
+                $updateData[$field] = $slot[$field];
+            }
+        }
+
+        $schedule->update($updateData);
+        $schedule->refresh();
+        $this->reorderSlotsForDate($jobFairId, $schedule->branding_day_date);
+
+        return $this->sendResponse(['result' => $schedule], 'Schedule updated successfully.');
     }
+    protected function reorderSlotsForDate($eventId, $brandingDayDate)
+    {
+        $slots = BrandingDaySchedule::where('event_id', $eventId)
+            ->where('branding_day_date', $brandingDayDate)
+            ->orderBy('start_time')
+            ->get();
+
+        $order = 1;
+
+        foreach ($slots as $slot) {
+            $slot->update(['order' => $order++]);
+        }
+    }
+
+
+
 
     /**
      * Delete a branding day slot.
@@ -153,9 +284,19 @@ class BrandingDayController extends BaseApiController
         } catch (ModelNotFoundException $e) {
             return $this->sendError('Schedule slot not found.', [], 404);
         }
-        $slot->delete();
+        // Use transaction for delete
+        DB::beginTransaction();
+        
+        try {
+            $slot->delete();
+            DB::commit();
 
-        return $this->sendResponse([], 'Schedule slot deleted.');
+            return $this->sendResponse([], 'Schedule slot deleted.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError('Failed to delete schedule slot. Please try again.', [], 500);
+        }
     }
 
     /**
@@ -167,11 +308,16 @@ class BrandingDayController extends BaseApiController
         try {
             // Find the job fair participation for the given jobFairId and participationId
             // And ensure the authenticated user is the 'submitted_by' user for this participation
-            $participation = JobFairParticipation::where('event_id', $jobFairId)
+            $query = JobFairParticipation::where('event_id', $jobFairId)
                 ->where('id', $participationId)
-                ->where('submitted_by', auth()->id()) // Crucial: ensure authenticated user submitted this participation
-                ->where('need_branding', true) // Ensure participation needs branding
-                ->firstOrFail();
+                ->where('need_branding', true); // Ensure participation needs branding
+
+            // If the authenticated user is not an admin, restrict by submitted_by
+            if (Auth::check() && !Auth::user()->hasRole('admin')) {
+                $query->where('submitted_by', auth()->id());
+            }
+
+            $participation = $query->firstOrFail();
         } catch (ModelNotFoundException $e) {
             return $this->sendError('Job Fair Participation not found, not submitted by you, or does not require branding.', [], 404);
         }
@@ -182,18 +328,31 @@ class BrandingDayController extends BaseApiController
         }
 
         $data = $request->validated();
-        // Handle photo upload if present
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('speakers','public'); // Store in storage/app/public/speakers
-            $data['photo'] = Storage::url($path); // Get public URL
+         // Use transaction for speaker creation
+        DB::beginTransaction();
+        
+        try {
+            // Handle photo upload if present
+            if ($request->hasFile('photo')) {
+                $path = $request->file('photo')->store('speakers', 'public'); // Store in storage/app/public/speakers
+                $data['photo'] = $path; // Store just the path: speakers/filename.jpg
+            }
+
+            // Assign the participation ID from the route parameter
+            $data['job_fair_participation_id'] = $participationId;
+
+            $speaker = BrandingDaySpeaker::create($data);
+            DB::commit();
+
+            if ($speaker->photo) {
+                $speaker->photo = asset('storage/' . $speaker->photo);
+            }
+            return $this->sendResponse($speaker, 'Speaker added successfully.', 201);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->sendError('Failed to add speaker. Please try again.', [], 500);
         }
-
-        // Assign the participation ID from the route parameter
-        $data['job_fair_participation_id'] = $participationId;
-
-        $speaker = BrandingDaySpeaker::create($data);
-
-        return $this->sendResponse($speaker, 'Speaker added successfully.', 201);
     }
 
     /**
@@ -218,7 +377,7 @@ class BrandingDayController extends BaseApiController
 
         // Prepend base URL to photo if it exists
         if ($speaker->photo) {
-            $speaker->photo = asset($speaker->photo);
+            $speaker->photo = asset('storage/' . $speaker->photo);
         }
 
         return $this->sendResponse($speaker, 'Speaker retrieved successfully.');
@@ -239,7 +398,7 @@ class BrandingDayController extends BaseApiController
 
         $speakers->map(function ($speaker) {
             if ($speaker->photo) {
-                $speaker->photo = asset($speaker->photo);
+                $speaker->photo = asset('storage/' . $speaker->photo);
             }
             return $speaker;
         });

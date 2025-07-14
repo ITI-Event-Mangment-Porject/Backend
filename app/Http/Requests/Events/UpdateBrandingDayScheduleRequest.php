@@ -15,9 +15,10 @@ class UpdateBrandingDayScheduleRequest extends BaseApiRequest
     {
         return [
             'branding_day_date' => 'sometimes|date',
-            'start_time' => 'required_with:end_time|date_format:H:i',
-            'end_time' => 'required_with:start_time|date_format:H:i|after:start_time',
-            'order' => 'nullable|integer',
+            'start_time' => 'sometimes|required_with:end_time|date_format:H:i',
+            'end_time' => 'sometimes|required_with:start_time|date_format:H:i|after:start_time',
+            'order' => 'sometimes|nullable|integer',
+            'branding_day_speaker_id' => 'sometimes|nullable|exists:branding_day_speakers,id',
         ];
     }
 
@@ -29,6 +30,7 @@ class UpdateBrandingDayScheduleRequest extends BaseApiRequest
             'end_time.date_format' => 'End time must be in H:i format.',
             'end_time.after' => 'End time must be after start time.',
             'order.integer' => 'Order must be an integer.',
+            'branding_day_speaker_id.exists' => 'The selected speaker does not exist.',
         ];
     }
 }
