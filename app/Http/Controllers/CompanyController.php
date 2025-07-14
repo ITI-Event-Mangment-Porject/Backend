@@ -14,6 +14,8 @@ use App\Models\Company\Company;
 use Illuminate\Validation\ValidationException;
 use Storage;
 use App\Http\Controllers\API\BaseApiController;
+use Carbon\Carbon; // Import Carbon for now()
+
 class CompanyController extends BaseApiController
 {
     //create new company
@@ -21,8 +23,21 @@ class CompanyController extends BaseApiController
     {
         try {
             $data = $request->validated();
-            $data['is_approved'] = false;
-            $data['status'] = 'pending';
+
+            // Check if the authenticated user is an admin
+            // Assuming there's a method `isAdmin()` on the User model or a similar check
+            // You might need to adjust this based on your actual user role/permission implementation
+            $isAdmin = Auth::check() && Auth::user()->hasRole('admin'); // Example: using Spatie/Laravel-Permission
+
+            if ($isAdmin) {
+                $data['is_approved'] = true;
+                $data['status'] = 'approved';
+                $data['approved_by'] = Auth::id();
+                $data['approved_at'] = Carbon::now();
+            } else {
+                $data['is_approved'] = false;
+                $data['status'] = 'pending';
+            }
 
             if ($request->hasFile('logo_path')) {
                 $path = $request->file('logo_path')->store('companies', 'public');
@@ -126,7 +141,7 @@ class CompanyController extends BaseApiController
             $company->is_approved = true;
             $company->status = 'approved';
             $company->reason = null;
-            $company->approved_by = Auth::user() ?? 2;
+            $company->approved_by = Auth::id();
             $company->approved_at = now();
             $company->save();
             return $this->sendResponse($company, 'Company approved successfully', 200);
@@ -149,7 +164,7 @@ class CompanyController extends BaseApiController
             $company->is_approved = false;
             $company->status = 'rejected';
             $company->reason = $request->reason;
-            $company->approved_by = Auth::id() ?? 2;
+            $company->approved_by = Auth::id();
             $company->approved_at = now();
             $company->save();
 
