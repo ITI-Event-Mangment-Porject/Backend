@@ -35,7 +35,7 @@ return [
         ],
     ],
     'portal' => [
-    'login_url' => env('PORTAL_API_URL', 'https://portal.example.com/login'),
+    'login_url' => env('PORTAL_API_URL', 'https://983393520e38.ngrok-free.app'),
     ]
 
 ];

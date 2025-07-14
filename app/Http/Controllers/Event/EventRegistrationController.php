@@ -107,7 +107,7 @@ class EventRegistrationController extends BaseApiController
             return $this->sendError('Event not found.', [], 404);
         }
         // Check if the user is authorized to view registrations
-        if (!auth()->user()->can('view', $event_flexible)) {
+        if (!auth()->user()) {
             return $this->sendError('Unauthorized to view registrations for this event.', [], 403);
         }
 
@@ -326,5 +326,24 @@ class EventRegistrationController extends BaseApiController
             // We don't throw the exception here to prevent registration failure
             // Just log it since notification is not critical to registration
         }
+    }
+    public function studentEvents()
+    {
+        $userId = auth()->id();
+
+        if (!$userId) {
+            return $this->sendError('User not authenticated.', [], 401);
+        }
+
+        // Get paginated events that the authenticated user has registered for
+        $events = Event::whereHas('registrations', function ($query) use ($userId) {
+            $query->where('user_id', $userId);
+        })->paginate(10); // You can adjust per_page as needed
+
+        if ($events->isEmpty()) {
+            return $this->sendResponse([], 'No events found for this student.', 200);
+        }
+
+        return $this->sendResponse($events, 'Student registered events retrieved successfully', 200);
     }
 }

@@ -141,6 +141,7 @@ Route::prefix('auth')->group(function () {
         Route::get('/{event_flexible}/registrations', [EventRegistrationController::class, 'registrations']);
         Route::patch('/{event_flexible}/cancel-registration', [EventRegistrationController::class, 'cancelMyRegistration']);
         Route::post('/{event_flexible}/check-in', [CheckInController::class, 'checkIn'])->middleware('check.any.role:admin,student');
+        Route::get('/my-registrations', [EventRegistrationController::class, 'studentEvents']);
         // Generic routes LAST
         Route::get('/{event_flexible}', [EventController::class, 'show']);
         Route::put('/{event_flexible}', [EventController::class, 'update'])->middleware('role:admin');
