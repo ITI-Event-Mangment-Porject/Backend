@@ -24,6 +24,12 @@ class CheckInController extends BaseApiController
                 return $this->sendError('User has already been checked in.', [], 422);
             }
 
+            // Check if the event status allows check-ins
+            $disallowedStatuses = ['completed', 'archived', 'draft'];
+            if (in_array($registration->event->status, $disallowedStatuses)) {
+                return $this->sendError('Check-in is not allowed for events with status: ' . $registration->event->status, [], 403);
+            }
+
             $registration->update([
                 'status' => 'attended',
                 'checked_in_at' => now(),
@@ -42,5 +48,27 @@ class CheckInController extends BaseApiController
             Log::error('Check-in failed: ' . $e->getMessage());
             return $this->sendError('Check-in failed. Please try again.', [$e->getMessage()], 500);
         }
+    }
+    public function getAttendanceList($eventId)
+    {
+        $registrations = EventRegistration::where('event_id', $eventId)
+            ->where('status', 'attended')
+            ->with(['user'])
+            ->get();
+
+        if ($registrations->isEmpty()) {
+            return $this->sendError('No attendance records found for this event.', [], 404);
+        }
+
+        $attendanceList = $registrations->map(function ($registration) {
+            return [
+                'name' => $registration->user->first_name . ' ' . $registration->user->last_name,
+                'Email' => $registration->user->email,
+                
+                'checked_in_at' => $registration->checked_in_at,
+            ];
+        });
+
+        return $this->sendResponse($attendanceList, 'Attendance list retrieved successfully.');
     }
 }
