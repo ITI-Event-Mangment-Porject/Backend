@@ -21,8 +21,58 @@ services:
       - DB_USERNAME=sql7789809
       - DB_PASSWORD=GUufRJwtjU
       - APP_URL=https://communiti-server.onrender.com
+      - CACHE_DRIVER=file
     networks:
       - laravel-network
+
+  # Queue Worker Service
+  queue-worker:
+    build: .
+    container_name: laravel-queue-worker
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=mysql
+      - DB_HOST=sql7.freesqldatabase.com
+      - DB_PORT=3306
+      - DB_DATABASE=sql7789809
+      - DB_USERNAME=sql7789809
+      - DB_PASSWORD=GUufRJwtjU
+      - APP_URL=https://communiti-server.onrender.com
+      - CACHE_DRIVER=file
+    depends_on:
+      - laravel-app
+    networks:
+      - laravel-network
+    restart: unless-stopped
+
+  # Scheduler Service
+  scheduler:
+    build: .
+    container_name: laravel-scheduler
+    command: >
+      sh -c "while true; do
+        php artisan schedule:run
+        sleep 60
+      done"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=mysql
+      - DB_HOST=sql7.freesqldatabase.com
+      - DB_PORT=3306
+      - DB_DATABASE=sql7789809
+      - DB_USERNAME=sql7789809
+      - DB_PASSWORD=GUufRJwtjU
+      - APP_URL=https://communiti-server.onrender.com
+      - CACHE_DRIVER=file
+    depends_on:
+      - laravel-app
+    networks:
+      - laravel-network
+    restart: unless-stopped
+
 
 networks:
   laravel-network:
